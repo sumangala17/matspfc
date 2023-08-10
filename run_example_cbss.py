@@ -33,7 +33,7 @@ def run_CBSS_MSMP():
   configs["mtsp_fea_check"] = 1
   configs["mtsp_atLeastOnce"] = 1
     # this determines whether the k-best TSP step will visit each node for at least once or exact once.
-  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.9/LKH"
+  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
   configs["time_limit"] = 60
   configs["eps"] = 0.0
   res_dict = cbss_msmp.RunCbssMSMP(grids, starts, targets, dests, configs)
@@ -74,7 +74,7 @@ def run_CBSS_MCPF():
   configs["mtsp_fea_check"] = 1
   configs["mtsp_atLeastOnce"] = 1
     # this determines whether the k-best TSP step will visit each node for at least once or exact once.
-  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.9/LKH"
+  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
   configs["time_limit"] = 60
   configs["eps"] = 0.0
 
