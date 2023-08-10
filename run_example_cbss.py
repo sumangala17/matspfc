@@ -4,6 +4,8 @@ All Rights Reserved.
 ABOUT: Entrypoint to the code.
 Oeffentlich fuer: RSS22
 """
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 import context
 import time
@@ -40,7 +42,53 @@ def run_CBSS_MSMP():
   
   print(res_dict)
 
-  return 
+  return
+
+
+def visualize_grid(grids, starts, targets, dests, path=None):
+  fig, axs = plt.subplots(10, 10)
+  plt.subplots_adjust(wspace=0, hspace=0)
+  # plt.figure(figsize=(5, 5))
+  # plt.imshow(grids)
+
+  colors = ['red', 'blue', 'yellow', 'green', 'turquoise']
+
+  i = 0
+  for point in starts:
+    x, y = int(point/10), point%10
+    circle = patches.Circle((0.5, 0.5), 0.3, linewidth=2, edgecolor=colors[i], facecolor=colors[i])
+    axs[y, x].add_patch(circle)
+    i += 1
+
+  points = np.where(grids == 1)
+  print(points)
+  for point in targets:
+    x, y = int(point / 10), point % 10
+    rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2, edgecolor='purple', facecolor='purple')
+    axs[y, x].add_patch(rect)
+
+  for i in range(len(points[0])):
+    x, y = points[0][i], points[1][i]
+    rect = patches.Rectangle((0, 0), 1, height=1, linewidth=2, edgecolor='black', facecolor='black')
+    axs[x, y].add_patch(rect)
+
+  i = 0
+  for point in dests:
+    x, y = int(point/10), point%10
+    triangle = patches.RegularPolygon((0.5, 0.5), 3, radius=0.3, linewidth=2, edgecolor=colors[i], facecolor=colors[i])
+    axs[y, x].add_patch(triangle)
+    i += 1
+
+  # if path is not None:
+  #   for i in range(len(starts)):  # over all agents
+  #     x_coords, y_coords, timestamps = path[i]
+
+
+  plt.setp(axs, xticks=[], yticks=[])
+  # plt.tight_layout()
+  plt.gca().invert_yaxis()
+  plt.show()
+
 
 def run_CBSS_MCPF():
   """
@@ -55,6 +103,9 @@ def run_CBSS_MCPF():
   starts = [11,22,33,88,99]
   targets = [72,81,83,40,38,27,66]
   dests = [46,69,19,28,37]
+
+  print("SETUP AT START")
+  visualize_grid(grids, starts, targets, dests)
 
   ac_dict = dict()
   ri = 0
@@ -81,6 +132,8 @@ def run_CBSS_MCPF():
   res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
   
   print(res_dict)
+
+  # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])
 
   return 
 
