@@ -183,6 +183,7 @@ class SeqMCPF():
 
         print(goal_idx_in_cluster_list, "see")
 
+        # this loop should execute only once unless there is a goal that cannot be visited by any agent
         for i in range(goal_idx_in_cluster_list + 1, len(self.cluster2goal[cid])):
           current_goal = self.cluster2goal[cid][i]
           if current_goal not in self.ac_dict:
@@ -199,6 +200,27 @@ class SeqMCPF():
             for k in range(self.num_robot):
               if k in self.ac_dict[current_goal]:
                 return k
+
+    # nid is in ac_dict, i.e., there are now assignment constraints for this goal
+    else:
+      for k in range(ri + 1, self.num_robot):
+        if k in self.ac_dict[nid]:
+          return k
+
+      else:
+        cid = self.goal2cluster[nid]
+        goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
+
+        # by directly taking next goal, we are now assuming each goal is reachable by at least one agent
+        if goal_idx_in_cluster_list + 1 >= len(self.cluster2goal[cid]):
+          next_goal = self.cluster2goal[cid][0]  # first goal in ordered list (we cycled back)
+        else:
+          next_goal = self.cluster2goal[cid][goal_idx_in_cluster_list + 1]
+
+        for k in range(self.num_robot):
+          if k in self.ac_dict[next_goal]:
+            return k
+
 
 
     ## for goals and dests
@@ -251,6 +273,30 @@ class SeqMCPF():
               if k in self.ac_dict[current_goal]:
                 return k
         # return ri - 1
+
+    # nid is in ac_dict, i.e., there are now assignment constraints for this goal
+    else:
+      for k in range(ri - 1, 0, -1):
+        if k in self.ac_dict[nid]:
+          return k
+
+      else:
+        cid = self.goal2cluster[nid]
+        goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
+
+        # by directly taking previous goal, we are now assuming each goal is reachable by at least one agent
+        if goal_idx_in_cluster_list - 1 < 0:
+          prev_goal = self.cluster2goal[cid][-1]  # last goal in ordered list (we cycled forward)
+        else:
+          prev_goal = self.cluster2goal[cid][goal_idx_in_cluster_list - 1]
+
+        for k in range(self.num_robot - 1, -1, -1):
+          if k in self.ac_dict[prev_goal]:
+            return k
+
+
+
+
     # else:
     #   for k in range(ri-1, -1, -1):
     #     if k in self.ac_dict[nid]:
@@ -293,7 +339,7 @@ class SeqMCPF():
           continue
         else:
           self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
-          self.cost_mat[idy,idx] = 0 
+          self.cost_mat[idy,idx] = 0
 
     ### PART-2, from goals to another goals/dests
     for idx in range(self.num_robot, self.endingIdxGoal): # loop over goals
@@ -350,7 +396,7 @@ class SeqMCPF():
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
     # print(self.cost_mat)
-    ### 
+    ###
     return
 
   def Solve(self):
@@ -403,7 +449,7 @@ class SeqMCPF():
         # print(" start a new seq, curr seq = ", seq)
       else:
         # print(" else ")
-        if curr_agent == this_agent: # skip other agents' goals 
+        if curr_agent == this_agent: # skip other agents' goals
           last_nid = seq[-1]
           seq.append(curr_nid)
           curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
@@ -415,8 +461,8 @@ class SeqMCPF():
             # print(" else if if, end seq = ", seq)
 
     if len(seqs_dict) != self.num_robot:
-      # It is possible that after adding Ie and Oe, 
-      # the instance becomes infeasible and thus the 
+      # It is possible that after adding Ie and Oe,
+      # the instance becomes infeasible and thus the
       # tour can not be splitted.
       # E.g. the Ie and Oe do not respect the one-in-a-set rules.
       return 0, dict(), dict()
