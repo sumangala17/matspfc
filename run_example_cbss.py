@@ -12,7 +12,8 @@ import time
 import numpy as np
 import random
 import cbss_msmp
-import cbss_mcpf
+# import cbss_mcpf
+import libmcpf.cbss_mcpf as cbss_mcpf
 
 import common as cm
 
@@ -104,6 +105,8 @@ def run_CBSS_MCPF():
   targets = [72,81,83,40,38,27,66]
   dests = [46,69,19,28,37]
 
+  cluster_target_map = [0,3,1,1,0,2,3]
+
   print("SETUP AT START")
   visualize_grid(grids, starts, targets, dests)
 
@@ -129,7 +132,7 @@ def run_CBSS_MCPF():
   configs["time_limit"] = 60
   configs["eps"] = 0.0
 
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, cluster_target_map, ac_dict, configs)
   
   print(res_dict)
 

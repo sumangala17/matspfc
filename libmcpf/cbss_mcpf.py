@@ -11,21 +11,21 @@ import seq_mcpf
 class CbssMCPF(cbss.CbssFramework) :
   """
   """
-  def __init__(self, grids, starts, goals, dests, ac_dict, configs):
+  def __init__(self, grids, starts, goals, dests, clusters, ac_dict, configs):
     """
     """
     # mtsp_solver = msmp_seq.BridgeLKH_MSMP(grids, starts, goals, dests)
     # mtsp_solver = mcpf_seq.BridgeLKH_MCPF(grids, starts, goals, dests, ac_dict) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
-    mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, ac_dict, configs) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
+    mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
     super(CbssMCPF, self).__init__(mtsp_solver, grids, starts, goals, dests, dict(), configs)
     return
 
-def RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs):
+def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs):
   """
   starts, targets and dests are all node ID.
   heu_weight and prune_delta are not in use. @2021-05-26
   """
-  ccbs_planner = CbssMCPF(grids, starts, targets, dests, ac_dict, configs)
+  ccbs_planner = CbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
   path_set, search_res = ccbs_planner.Search()
   # print(path_set)
   # print(res_dict)
