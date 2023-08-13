@@ -22,6 +22,7 @@ import imageio
 
 import common as cm
 
+visited = set()
 
 def run_CBSS_MSMP():
     """
@@ -58,7 +59,7 @@ def get_gif():
     clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
     clip.write_gif('clip2.gif', loop=5)
 
-def create_gif(grids, targets, dests, path):
+def create_gif(grids, targets, dests, ac_dict, clusters, path):
     from moviepy.editor import ImageSequenceClip
     n = len(dests)  # number of robots
     max_time = 0
@@ -82,7 +83,7 @@ def create_gif(grids, targets, dests, path):
 
         filename = f'{timestep}.png'
         filenames.append(filename)
-        visualize_grid(grids, current_agent_positions, targets, dests, filename)
+        visualize_grid(grids, current_agent_positions, targets, dests, ac_dict, clusters, filename)
 
     # build gif
     clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
@@ -99,7 +100,7 @@ def create_gif(grids, targets, dests, path):
 
 
 
-def visualize_grid(grids, starts, targets, dests, filename=None):
+def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=None):
     fig, axs = plt.subplots(10, 10)
     plt.subplots_adjust(wspace=0, hspace=0)
     # plt.figure(figsize=(5, 5))
@@ -107,20 +108,29 @@ def visualize_grid(grids, starts, targets, dests, filename=None):
 
     colors = ['red', 'blue', 'yellow', 'green', 'turquoise']
 
-    i = 0
-    for point in starts:
-        x, y = int(point / 10), point % 10
-        circle = patches.Circle((0.5, 0.5), 0.3, linewidth=2, edgecolor=colors[i], facecolor=colors[i])
-        axs[9 - x, y].add_patch(circle)
-        i += 1
+    cluster_colors = ['grey', 'orange', 'pink', 'brown']
 
-    points = np.where(grids == 1)
-    print(points)
-    for point in targets:
+    for agent_num in range(len(starts)):
+        point = starts[agent_num]
+        if point in targets and (point not in ac_dict or agent_num in ac_dict[point]):
+            visited.add(point)
         x, y = int(point / 10), point % 10
-        rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2, edgecolor='purple', facecolor='purple')
+        circle = patches.Circle((0.5, 0.5), 0.3, linewidth=2, edgecolor=colors[agent_num], facecolor=colors[agent_num])
+        axs[9 - x, y].add_patch(circle)
+
+    for i in range(len(targets)):
+        point = targets[i]
+        x, y = int(point / 10), point % 10
+        if point in visited:
+            facecolor = 'white'
+        else:
+            facecolor = cluster_colors[clusters[i]]
+        rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2,
+                                 edgecolor=cluster_colors[clusters[i]], facecolor=facecolor)
         axs[9 - x, y].add_patch(rect)
 
+    points = np.where(grids == 1)
+    # GRIDS (mark obstacles)
     for i in range(len(points[0])):
         x, y = points[0][i], points[1][i]
         rect = patches.Rectangle((0, 0), 1, height=1, linewidth=2, edgecolor='black', facecolor='black')
@@ -164,7 +174,7 @@ def run_CBSS_MCPF():
     cluster_target_map = [0, 3, 1, 1, 0, 2, 3]
 
     print("SETUP AT START")
-    visualize_grid(grids, starts, targets, dests)
+    # visualize_grid(grids, starts, targets, dests, ac_dict=None, clusters=cluster_target_map)
 
     ac_dict = dict()
     ri = 0
@@ -197,8 +207,8 @@ def run_CBSS_MCPF():
         print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
               path[agent][2])
 
-    # create_gif(grids, targets, dests, res_dict['path_set'])
-    get_gif()
+    # create_gif(grids, targets, dests, ac_dict, cluster_target_map, res_dict['path_set'])
+    # get_gif()
 
     return
 
