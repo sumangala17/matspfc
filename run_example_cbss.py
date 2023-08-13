@@ -10,10 +10,15 @@ import matplotlib.patches as patches
 import context
 import time
 import numpy as np
+import os
 import random
 import cbss_msmp
 # import cbss_mcpf
 import libmcpf.cbss_mcpf as cbss_mcpf
+
+import matplotlib.animation as animation
+from PIL import Image
+import imageio
 
 import common as cm
 
@@ -46,7 +51,55 @@ def run_CBSS_MSMP():
 
     return
 
-def visualize_grid(grids, starts, targets, dests, path=None):
+
+def get_gif():
+    from moviepy.editor import ImageSequenceClip
+    filenames = ['{}.png'.format(i) for i in range(26)]
+    clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
+    clip.write_gif('clip2.gif', loop=5)
+
+def create_gif(grids, targets, dests, path):
+    from moviepy.editor import ImageSequenceClip
+    n = len(dests)  # number of robots
+    max_time = 0
+    for i in range(n):
+        max_time = max(max_time, path[i][2][-2])
+
+    agent_paths = []
+    for i in range(n):
+        agent_paths.append(list(zip(path[i][0], path[i][1])))
+
+    filenames = []
+
+    for timestep in range(max_time):
+        current_agent_positions = []
+        for i in range(n):
+            if timestep < len(agent_paths[i]):
+                x, y = agent_paths[i][timestep]
+            else:
+                x, y = agent_paths[i][-1]
+            current_agent_positions.append(10*y + x)
+
+        filename = f'{timestep}.png'
+        filenames.append(filename)
+        visualize_grid(grids, current_agent_positions, targets, dests, filename)
+
+    # build gif
+    clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
+    clip.write_gif('clip2.gif', loop=5)
+
+    # with imageio.get_writer('mygif.gif', mode='I') as writer:
+    #     for filename in filenames:
+    #         image = imageio.imread(filename)
+    #         writer.append_data(image)
+
+    # Remove files
+    # for filename in set(filenames):
+    #     os.remove(filename)
+
+
+
+def visualize_grid(grids, starts, targets, dests, filename=None):
     fig, axs = plt.subplots(10, 10)
     plt.subplots_adjust(wspace=0, hspace=0)
     # plt.figure(figsize=(5, 5))
@@ -81,15 +134,17 @@ def visualize_grid(grids, starts, targets, dests, path=None):
         axs[9 - x, y].add_patch(triangle)
         i += 1
 
-    # if path is not None:
-    #   for i in range(len(starts)):  # over all agents
-    #     x_coords, y_coords, timestamps = path[i]
 
     plt.setp(axs, xticks=[], yticks=[])
     # plt.tight_layout()
     # plt.gca().invert_yaxis()
     # plt.gca().invert_xaxis()
-    plt.show()
+    if not filename:
+        plt.show()
+    else:
+        # save frame
+        plt.savefig(filename)
+        plt.close()
 
 
 def run_CBSS_MCPF():
@@ -143,6 +198,7 @@ def run_CBSS_MCPF():
               path[agent][2])
 
     # create_gif(grids, targets, dests, res_dict['path_set'])
+    get_gif()
 
     return
 
