@@ -160,6 +160,27 @@ class SeqMCPF():
       cluster2goal[key] = np.array(cluster2goal[key])
     return cluster2goal
 
+  def _NextAgentDests(self, ri, nid):
+    """
+    Return the next agent after agent-ri w.r.t node nid
+    Note that assignment constraint need to be taken into consideration!
+    """
+    ## for starts
+    if nid in self.setStarts:
+      return ri
+    ## for goals and dests
+    if nid not in self.ac_dict:
+      if ri + 1 >= self.num_robot:
+        return 0
+      else:
+        return ri + 1
+    else:
+      for k in range(ri + 1, self.num_robot):
+        if k in self.ac_dict[nid]:
+          return k
+      for k in range(ri + 1):
+        if k in self.ac_dict[nid]:
+          return k
 
   def _NextAgent(self, ri, nid):
     """
@@ -171,17 +192,15 @@ class SeqMCPF():
       print("This was true: found next agent for agent at a start")  # probably never used
       return ri
 
+    if nid in self.dests:
+      return self._NextAgentDests(ri, nid)
 
     if nid not in self.ac_dict:
       if ri + 1 < self.num_robot:
         return ri + 1
       else:
         cid = self.goal2cluster[nid]
-        print(cid, 'hi', self.goal2cluster)
-        print(nid, 'hi1', self.cluster2goal[cid])
         goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
-
-        print(goal_idx_in_cluster_list, "see")
 
         # this loop should execute only once unless there is a goal that cannot be visited by any agent
         for i in range(goal_idx_in_cluster_list + 1, len(self.cluster2goal[cid])):
@@ -207,35 +226,45 @@ class SeqMCPF():
         if k in self.ac_dict[nid]:
           return k
 
+      # else:
+      cid = self.goal2cluster[nid]
+      goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
+
+      # by directly taking next goal, we are now assuming each goal is reachable by at least one agent
+      # TODO: implement loop in case next goal unreachable by any agent (but those can be rm manually so ok to assume otherwise)
+      if goal_idx_in_cluster_list + 1 >= len(self.cluster2goal[cid]):
+        next_goal = self.cluster2goal[cid][0]  # first goal in ordered list (we cycled back)
       else:
-        cid = self.goal2cluster[nid]
-        goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
+        next_goal = self.cluster2goal[cid][goal_idx_in_cluster_list + 1]
 
-        # by directly taking next goal, we are now assuming each goal is reachable by at least one agent
-        if goal_idx_in_cluster_list + 1 >= len(self.cluster2goal[cid]):
-          next_goal = self.cluster2goal[cid][0]  # first goal in ordered list (we cycled back)
-        else:
-          next_goal = self.cluster2goal[cid][goal_idx_in_cluster_list + 1]
-
+      if next_goal not in self.ac_dict:
+        return 0
+      else:
         for k in range(self.num_robot):
           if k in self.ac_dict[next_goal]:
             return k
 
 
-
+  def _PrevAgentDests(self, ri, nid):
+    """
+    similar to _NextAgent(), inverse function.
+    """
+    ## for starts
+    if nid in self.setStarts:
+      return ri
     ## for goals and dests
-    # if nid not in self.ac_dict:
-    #   if ri + 1 >= self.num_robot:
-    #     return 0
-    #   else:
-    #     return ri + 1
-    # else:
-    #   for k in range(ri+1, self.num_robot):
-    #     if k in self.ac_dict[nid]:
-    #       return k
-    #   for k in range(ri+1):
-    #     if k in self.ac_dict[nid]:
-    #       return k
+    if nid not in self.ac_dict:
+      if ri - 1 < 0:
+        return self.num_robot - 1
+      else:
+        return ri - 1
+    else:
+      for k in range(ri - 1, -1, -1):
+        if k in self.ac_dict[nid]:
+          return k
+      for k in range(self.num_robot, ri - 1, -1):
+        if k in self.ac_dict[nid]:
+          return k
 
   def _PrevAgent(self, ri, nid):
     """
@@ -244,7 +273,12 @@ class SeqMCPF():
     ## for starts
     if nid in self.setStarts:
       return ri
+
     ## for goals and dests
+
+    if nid in self.dests:
+      return self._PrevAgentDests(ri, nid)
+
     if nid not in self.ac_dict:
       if ri - 1 < 0:
         return self.num_robot-1
@@ -290,9 +324,12 @@ class SeqMCPF():
         else:
           prev_goal = self.cluster2goal[cid][goal_idx_in_cluster_list - 1]
 
-        for k in range(self.num_robot - 1, -1, -1):
-          if k in self.ac_dict[prev_goal]:
-            return k
+        if prev_goal not in self.ac_dict:
+          return self.num_robot - 1
+        else:
+          for k in range(self.num_robot - 1, -1, -1):
+            if k in self.ac_dict[prev_goal]:
+              return k
 
 
 
@@ -350,7 +387,7 @@ class SeqMCPF():
         if (self._NextAgent(self.index2agent[idx],nid1) == self.index2agent[idy]):
           # agent-i's goal to agent-(i+1)'s goal or dest.
           if (nid1 == nid2) or self.goal2cluster[nid1] == self.goal2cluster[nid2]:
-            ##TODO or agent N's goal (say vg) to agent 1's goal vg1 that is in the same cluster as vg
+            ##TODO (done) OR agent N's goal (say vg) to agent 1's goal vg1 that is in the same cluster as vg
             # same goal node, but for diff agents
             self.cost_mat[idx,idy] = 0
           else:
