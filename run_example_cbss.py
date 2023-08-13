@@ -58,26 +58,26 @@ def visualize_grid(grids, starts, targets, dests, path=None):
   for point in starts:
     x, y = int(point/10), point%10
     circle = patches.Circle((0.5, 0.5), 0.3, linewidth=2, edgecolor=colors[i], facecolor=colors[i])
-    axs[y, x].add_patch(circle)
+    axs[9-x, y].add_patch(circle)
     i += 1
 
   points = np.where(grids == 1)
   print(points)
   for point in targets:
-    x, y = int(point / 10), point % 10
+    x,y = int(point / 10), point % 10
     rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2, edgecolor='purple', facecolor='purple')
-    axs[y, x].add_patch(rect)
+    axs[9-x, y].add_patch(rect)
 
   for i in range(len(points[0])):
-    x, y = points[0][i], points[1][i]
+    x,y = points[0][i], points[1][i]
     rect = patches.Rectangle((0, 0), 1, height=1, linewidth=2, edgecolor='black', facecolor='black')
-    axs[x, y].add_patch(rect)
+    axs[9-x, y].add_patch(rect)
 
   i = 0
   for point in dests:
-    x, y = int(point/10), point%10
+    x,y = int(point/10), point%10
     triangle = patches.RegularPolygon((0.5, 0.5), 3, radius=0.3, linewidth=2, edgecolor=colors[i], facecolor=colors[i])
-    axs[y, x].add_patch(triangle)
+    axs[9-x, y].add_patch(triangle)
     i += 1
 
   # if path is not None:
@@ -87,7 +87,8 @@ def visualize_grid(grids, starts, targets, dests, path=None):
 
   plt.setp(axs, xticks=[], yticks=[])
   # plt.tight_layout()
-  plt.gca().invert_yaxis()
+  # plt.gca().invert_yaxis()
+  # plt.gca().invert_xaxis()
   plt.show()
 
 
@@ -135,6 +136,10 @@ def run_CBSS_MCPF():
   res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, cluster_target_map, ac_dict, configs)
   
   print(res_dict)
+
+  path = res_dict['path_set']
+  for agent in path:
+    print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times", path[agent][2])
 
   # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])
 
