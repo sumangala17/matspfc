@@ -360,6 +360,46 @@ class SeqMCPF():
     #     if k in self.ac_dict[nid]:
     #       return k
 
+  def set_intra_cluster_costs(self):
+    for c in range(len(self.clusters)):
+      cid = self.clusters[c]
+      k = len(self.cluster2goal[cid])
+
+      for i in range(k):
+        current_goal = self.cluster2goal[cid][i]
+        if current_goal in self.ac_dict:
+          agent_list = sorted(self.ac_dict[current_goal])
+        else:
+          agent_list = range(self.num_robot)
+
+        for ag1 in range(len(agent_list)):   # go from agent [0] to [-1] of same goal node
+          for ag2 in range(ag1 + 1, len(agent_list)):
+            idx = self.agentNode2index[(agent_list[ag1], current_goal)]
+            idy = self.agentNode2index[(agent_list[ag2], current_goal)]
+            self.cost_mat[idx][idy] = 0
+            self.cost_mat[idy][idx] = self.infM
+
+
+        last_copy_agent_idx = self.agentNode2index[(agent_list[-1], current_goal)]
+        if i < k - 1:
+          next_goal = self.cluster2goal[cid][i+1]
+        else:
+          next_goal = self.cluster2goal[cid][0]
+        if next_goal not in self.ac_dict:
+          first_agent_newgoal_eligible = 0
+        else:
+          first_agent_newgoal_eligible = sorted(self.ac_dict[next_goal])[0]
+
+        first_copy_newgoal_agent_idx = self.agentNode2index[(first_agent_newgoal_eligible, next_goal)]
+        self.cost_mat[(last_copy_agent_idx, first_copy_newgoal_agent_idx)] = 0
+        self.cost_mat[(first_copy_newgoal_agent_idx, last_copy_agent_idx)] = self.infM
+
+    # for i in range(len(self.cost_mat)):
+    #   self.cost_mat[i][i] = self.infM
+
+
+
+
   def InitEdges(self):
     """
     compute edge costs between pair of nodes.
@@ -403,38 +443,31 @@ class SeqMCPF():
       # from nid1 to a goal
       for idy in range(self.num_robot, self.endingIdxGoal):
         nid2 = self.index2nodeId[idy] # another goal
-        next_agent, new_node = self._NextAgent(self.index2agent[idx],nid1)
-        if not new_node:
-          new_node = nid2
-        if new_node != nid2:
-          # print(self.agentNode2index)
-          ag2 = self.agentNode2index[(self.index2agent[next_agent], new_node)]
-        else:
-          ag2 = idy
-        if (next_agent == self.index2agent[idy]):
+        if (self._NextAgentDests(self.index2agent[idx],nid1) == self.index2agent[idy]):
           # agent-i's goal to agent-(i+1)'s goal or dest.
-          if (nid1 == nid2) or self.goal2cluster[nid1] == self.goal2cluster[new_node]:
+          if (nid1 == nid2): # or self.goal2cluster[nid1] == self.goal2cluster[new_node]:
             ##TODO (done) OR agent N's goal (say vg) to agent 1's goal vg1 that is in the same cluster as vg
             # same goal node, but for diff agents
-            # self.cost_mat[idx,idy] = 0
-            self.cost_mat[idx,ag2] = 0
+            self.cost_mat[idx,idy] = 0
             print("we set{},{} to 0 because {},{} or {},{}".format(idx, idy, nid1, nid2,self.goal2cluster[nid1],self.goal2cluster[nid2] ))
           else:
-            self.cost_mat[idx,ag2] = self.GetDist(nid1, nid2) + self.bigM
+            self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
         else:
           # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
           self.cost_mat[idx,idy] = self.infM
 
-      # from nid1 to a dest, need to set both (idx,idy) and (idy,idx)
-      for idy in range(self.endingIdxGoal,len(self.index2agent)):
-        nid2 = self.index2nodeId[idy] # a destination
 
-        if (self._NextAgent(self.index2agent[idx], nid1) == self.index2agent[idy]):   ## (todo) changed
-          self.cost_mat[idx, idy] = self.GetDist(nid1, nid2) + self.bigM
-          self.cost_mat[idy, idx] = self.infM  # cannot move from dest to a goal
-        else:
+      # from nid1 to a dest, need to set both (idx,idy) and (idy,idx)
+      for idy in range(self.endingIdxGoal, len(self.index2agent)):
+        nid2 = self.index2nodeId[idy]  # a destination
+        if (self._NextAgentDests(self.index2agent[idx], nid1) != self.index2agent[idy]):
+          # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
           self.cost_mat[idx, idy] = self.infM
           self.cost_mat[idy, idx] = self.infM
+        else:
+          self.cost_mat[idx, idy] = self.GetDist(nid1, nid2) + self.bigM
+          self.cost_mat[idy, idx] = self.infM  # cannot move from dest to a goal
+
 
 
         # if (self._NextAgent(self.index2agent[idx],nid1) != self.index2agent[idy]):
@@ -451,7 +484,7 @@ class SeqMCPF():
       for idy in range(self.endingIdxGoal,len(self.index2agent)):
         nid2 = self.index2nodeId[idy] # another destination
 
-        if (self._NextAgent(self.index2agent[idx],nid1) == self.index2agent[idy]):
+        if (self._NextAgentDests(self.index2agent[idx],nid1) == self.index2agent[idy]):
           # agent-i's dest to the next agent's dest.
           if (nid1 == nid2):
             # same dest node, but for diff agents
@@ -461,6 +494,8 @@ class SeqMCPF():
         else:
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
+
+    self.set_intra_cluster_costs()
     temp = copy.deepcopy(self.cost_mat)
     temp[temp > 10000] = -1
     print("COST MATRIX\n", temp)
@@ -546,7 +581,7 @@ class SeqMCPF():
     """
 
     ## get indices
-    rj = self._PrevAgent(ri,v1)
+    rj = self._PrevAgentDests(ri,v1)
     index1 = self.agentNode2index[(rj,v1)]
     index2 = self.agentNode2index[(ri,v2)]
 
@@ -573,7 +608,7 @@ class SeqMCPF():
     the transformed graph (represented by cost_mat in SeqMCPF class.)
 
     """
-    rj = self._PrevAgent(ri,v1)
+    rj = self._PrevAgentDests(ri,v1)
     index1 = self.agentNode2index[(rj,v1)]
     index2 = self.agentNode2index[(ri,v2)]
     # print("AddIe(",index1,index2,")")
@@ -585,7 +620,7 @@ class SeqMCPF():
     """
     input ri is used. Oe is imposed on the transformed graph.
     """
-    rj = self._PrevAgent(ri,v1)
+    rj = self._PrevAgentDests(ri,v1)
     index1 = self.agentNode2index[(rj,v1)]
     index2 = self.agentNode2index[(ri,v2)]
     # print("AddOe(",index1,index2,")")
@@ -614,7 +649,7 @@ class SeqMCPF():
         v1 = ie[0]
         v2 = ie[1]
         ri = ie[2]
-        rk = self._PrevAgent(ri,v2)
+        rk = self._PrevAgentDests(ri,v2)
         agent_set = self._GetEligibleAgents(v2)
         for rj in agent_set:
           if (rj == rk): # this is the only case where Ie is OK to happen.
