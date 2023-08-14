@@ -35,6 +35,7 @@ class SeqMCPF():
     self.goals = goals # i.e. tasks, waypoints.
     self.dests = dests # N destinations.
     self.clusters = clusters  # ID list of cluster ID for corresponding target
+    print("clusters", clusters)
     self.ac_dict = ac_dict # assignment constraints.
     # self.lkh_file_name = lkh_file_name
     self.configs = configs
@@ -531,6 +532,11 @@ class SeqMCPF():
     seqs = list()
     seqs_dict = dict()
     cost_dict = dict() # the cost of each agent's goal sequences
+    print("TOUR", tour)
+
+    num_clusters = len(np.unique(np.array(self.clusters)))
+    print(num_clusters)
+    visited = np.zeros(num_clusters)
 
     this_agent = -1
     curr_cost = 0
@@ -554,8 +560,16 @@ class SeqMCPF():
         # print(" else ")
         if curr_agent == this_agent: # skip other agents' goals
           last_nid = seq[-1]
-          seq.append(curr_nid)
-          curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
+
+          if curr_nid in self.goal2cluster:
+            curr_cluster = self.goal2cluster[curr_nid]
+            if not visited[curr_cluster]:
+              seq.append(curr_nid)
+              curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
+              visited[curr_cluster] = 1
+          else:
+            seq.append(curr_nid)
+            curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
           # print(" else if, append curr seq, seq = ", seq)
           if self.IsDest(curr_nid):
             ## end a sequence for "this_agent"
