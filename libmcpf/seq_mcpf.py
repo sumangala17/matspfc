@@ -190,41 +190,58 @@ class SeqMCPF():
     ## for starts
     if nid in self.setStarts:
       print("This was true: found next agent for agent at a start")  # probably never used
-      return ri
+      return ri, None
 
+    # return self._NextAgentDests(ri, nid)
     if nid in self.dests:
-      return self._NextAgentDests(ri, nid)
+      return self._NextAgentDests(ri, nid), None
 
     if nid not in self.ac_dict:
       if ri + 1 < self.num_robot:
-        return ri + 1
+        return ri + 1, None
       else:
         cid = self.goal2cluster[nid]
         goal_idx_in_cluster_list = np.argwhere(self.cluster2goal[cid] == nid).squeeze()
 
+        # by directly taking next goal, we are now assuming each goal is reachable by at least one agent
+        # TODO: implement loop in case next goal unreachable by any agent (but those can be rm manually so ok to assume otherwise)
+        if goal_idx_in_cluster_list + 1 >= len(self.cluster2goal[cid]):
+          next_goal = self.cluster2goal[cid][0]  # first goal in ordered list (we cycled back)
+        else:
+          next_goal = self.cluster2goal[cid][goal_idx_in_cluster_list + 1]
+
+        if next_goal not in self.ac_dict:
+          return 0, next_goal
+        else:
+          for k in range(self.num_robot):
+            if k in self.ac_dict[next_goal]:
+              return k, next_goal
+
+
+
         # this loop should execute only once unless there is a goal that cannot be visited by any agent
-        for i in range(goal_idx_in_cluster_list + 1, len(self.cluster2goal[cid])):
-          current_goal = self.cluster2goal[cid][i]
-          if current_goal not in self.ac_dict:
-            return 0
-          else:
-            for k in range(self.num_robot):
-              if k in self.ac_dict[current_goal]:
-                return k
-        for i in range(goal_idx_in_cluster_list):
-          current_goal = self.cluster2goal[cid][i]
-          if current_goal not in self.ac_dict:
-            return 0
-          else:
-            for k in range(self.num_robot):
-              if k in self.ac_dict[current_goal]:
-                return k
+        # for i in range(goal_idx_in_cluster_list + 1, len(self.cluster2goal[cid])):
+        #   current_goal = self.cluster2goal[cid][i]
+        #   if current_goal not in self.ac_dict:
+        #     return 0
+        #   else:
+        #     for k in range(self.num_robot):
+        #       if k in self.ac_dict[current_goal]:
+        #         return k
+        # for i in range(goal_idx_in_cluster_list):
+        #   current_goal = self.cluster2goal[cid][i]
+        #   if current_goal not in self.ac_dict:
+        #     return 0
+        #   else:
+        #     for k in range(self.num_robot):
+        #       if k in self.ac_dict[current_goal]:
+        #         return k
 
     # nid is in ac_dict, i.e., there are now assignment constraints for this goal
     else:
       for k in range(ri + 1, self.num_robot):
         if k in self.ac_dict[nid]:
-          return k
+          return k, None
 
       # else:
       cid = self.goal2cluster[nid]
@@ -238,11 +255,11 @@ class SeqMCPF():
         next_goal = self.cluster2goal[cid][goal_idx_in_cluster_list + 1]
 
       if next_goal not in self.ac_dict:
-        return 0
+        return 0, next_goal
       else:
         for k in range(self.num_robot):
           if k in self.ac_dict[next_goal]:
-            return k
+            return k, next_goal
 
 
   def _PrevAgentDests(self, ri, nid):
@@ -274,6 +291,7 @@ class SeqMCPF():
     if nid in self.setStarts:
       return ri
 
+    # return self._PrevAgentDests(ri, nid)
     ## for goals and dests
 
     if nid in self.dests:
@@ -367,6 +385,7 @@ class SeqMCPF():
         else: # nid2 is a goal within agent idx's copy.
           self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
           self.cost_mat[idy,idx] = self.infM # inf., from agent's goal to agent's start.
+        # print("Cost matrix[{}][{}] = {}, reverse = {}".format(idx, idy, self.cost_mat[idx, idy], self.cost_mat[idy, idx]), "where nodes are", nid1, nid2)
       # from nid1 to a dest
       for idy in range(self.endingIdxGoal, len(self.index2agent)):
         nid2 = self.index2nodeId[idy] # a dest
@@ -384,14 +403,24 @@ class SeqMCPF():
       # from nid1 to a goal
       for idy in range(self.num_robot, self.endingIdxGoal):
         nid2 = self.index2nodeId[idy] # another goal
-        if (self._NextAgent(self.index2agent[idx],nid1) == self.index2agent[idy]):
+        next_agent, new_node = self._NextAgent(self.index2agent[idx],nid1)
+        if not new_node:
+          new_node = nid2
+        if new_node != nid2:
+          # print(self.agentNode2index)
+          ag2 = self.agentNode2index[(self.index2agent[next_agent], new_node)]
+        else:
+          ag2 = idy
+        if (next_agent == self.index2agent[idy]):
           # agent-i's goal to agent-(i+1)'s goal or dest.
-          if (nid1 == nid2) or self.goal2cluster[nid1] == self.goal2cluster[nid2]:
+          if (nid1 == nid2) or self.goal2cluster[nid1] == self.goal2cluster[new_node]:
             ##TODO (done) OR agent N's goal (say vg) to agent 1's goal vg1 that is in the same cluster as vg
             # same goal node, but for diff agents
-            self.cost_mat[idx,idy] = 0
+            # self.cost_mat[idx,idy] = 0
+            self.cost_mat[idx,ag2] = 0
+            print("we set{},{} to 0 because {},{} or {},{}".format(idx, idy, nid1, nid2,self.goal2cluster[nid1],self.goal2cluster[nid2] ))
           else:
-            self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
+            self.cost_mat[idx,ag2] = self.GetDist(nid1, nid2) + self.bigM
         else:
           # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
           self.cost_mat[idx,idy] = self.infM
@@ -432,7 +461,9 @@ class SeqMCPF():
         else:
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
-    # print(self.cost_mat)
+    temp = copy.deepcopy(self.cost_mat)
+    temp[temp > 10000] = -1
+    print("COST MATRIX\n", temp)
     ###
     return
 

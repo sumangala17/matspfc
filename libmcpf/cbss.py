@@ -13,7 +13,7 @@ import time
 import numpy as np
 import sys
 
-DEBUG_CBSS = 0
+DEBUG_CBSS = 1#0
 
 class CbsConstraint:
   """
@@ -150,6 +150,7 @@ class CbssNode:
     Note that one conflict should be splited to 2 constraints.
     """
     done_set = set()
+    print("sol paths", self.sol.paths)
     for k1 in self.sol.paths:
       for k2 in self.sol.paths:
         if k2 in done_set or k2 == k1:
@@ -312,7 +313,11 @@ class CbssFramework:
     tlimit = self.time_limit - (time.perf_counter() - self.tstart)
 
     # plan from start to assigned goals and to dest as specified in goal sequence
+    print("nodes", self.nodes[nid])
+    print("hi", ri, self.root_seq_dict[self.nodes[nid].root_id])
     gseq = self.root_seq_dict[self.nodes[nid].root_id].sol[ri]
+    print("dict", self.root_seq_dict[self.nodes[nid].root_id].sol)
+    print("one gseq", gseq)
     ss = gseq[0]
     kth = 1
     t0 = 0
@@ -483,6 +488,7 @@ class CbssFramework:
         print("### CBSS popped node: ", curr_node)
       
       cstrs = self.FirstConflict(curr_node)
+      print("CONSTRAINTS", cstrs)
 
       if len(cstrs) == 0: # no conflict, terminates
         print("! CBSS succeed !")

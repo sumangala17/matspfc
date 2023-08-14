@@ -72,7 +72,7 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
 
     filenames = []
 
-    for timestep in range(max_time):
+    for timestep in range(max_time + 1):
         current_agent_positions = []
         for i in range(n):
             if timestep < len(agent_paths[i]):
@@ -87,7 +87,7 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
 
     # build gif
     clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
-    clip.write_gif('clip2.gif', loop=5)
+    clip.write_gif('simple1.gif', loop=5)
 
     # with imageio.get_writer('mygif.gif', mode='I') as writer:
     #     for filename in filenames:
@@ -167,22 +167,23 @@ def run_CBSS_MCPF():
     grids = np.zeros((ny, nx))
     grids[5, 3:7] = 1  # obstacles
 
-    starts = [11, 22, 33, 88, 99]
-    targets = [72, 81, 83, 40, 38, 27, 66]
-    dests = [46, 69, 19, 28, 37]
+    starts = [11]#, 22, 33, 88, 99]
+    targets = [72, 81, 83]#, 40, 38, 27, 66]
+    dests = [46]#, 69, 19, 28, 37]
 
-    cluster_target_map = [0, 3, 1, 1, 0, 2, 3]
+    cluster_target_map = [0,0,0]# [0, 3, 1, 1, 0, 2, 3]
 
     print("SETUP AT START")
     # visualize_grid(grids, starts, targets, dests, ac_dict=None, clusters=cluster_target_map)
 
     ac_dict = dict()
     ri = 0
-    for k in targets:
-        ac_dict[k] = set([ri, ri + 1])
-        ri += 1
-        if ri >= len(starts) - 1:
-            break
+    # for k in targets:
+        # ac_dict[k] = set([0, 1])
+        # ac_dict[k] = set([ri, ri + 1])
+        # ri += 1
+        # if ri >= len(starts) - 1:
+        #     break
     ri = 0
     for k in dests:
         ac_dict[k] = set([ri])
@@ -207,7 +208,7 @@ def run_CBSS_MCPF():
         print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
               path[agent][2])
 
-    # create_gif(grids, targets, dests, ac_dict, cluster_target_map, res_dict['path_set'])
+    create_gif(grids, targets, dests, ac_dict, cluster_target_map, res_dict['path_set'])
     # get_gif()
 
     return
@@ -216,7 +217,7 @@ def run_CBSS_MCPF():
 if __name__ == '__main__':
     print("begin of main")
 
-    run_CBSS_MSMP()
+    # run_CBSS_MSMP()
 
     run_CBSS_MCPF()
 
