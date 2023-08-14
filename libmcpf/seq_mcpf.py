@@ -450,7 +450,6 @@ class SeqMCPF():
             ##TODO (done) OR agent N's goal (say vg) to agent 1's goal vg1 that is in the same cluster as vg
             # same goal node, but for diff agents
             self.cost_mat[idx,idy] = 0
-            print("we set{},{} to 0 because {},{} or {},{}".format(idx, idy, nid1, nid2,self.goal2cluster[nid1],self.goal2cluster[nid2] ))
           else:
             self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
         else:
