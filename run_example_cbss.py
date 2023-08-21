@@ -22,7 +22,14 @@ import imageio
 
 import common as cm
 
+from dataset import get_world
+
 visited = set()
+DATASET_GIVEN = False# True
+
+COLORS = [[0,0,1],[0,1,0],[1,0,0],
+          [1,1,0],[1,0,1],[0,1,1],
+          [0.25,0.75,0.75],[0.75,0.25,0.75],[0.75,0.75,0.25],[0.75,0.75,0.75],]
 
 def run_CBSS_MSMP():
     """
@@ -45,12 +52,74 @@ def run_CBSS_MSMP():
     # this determines whether the k-best TSP step will visit each node for at least once or exact once.
     configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
     configs["time_limit"] = 60
-    configs["eps"] = 0.0
+    configs["eps"] = 0.1
     res_dict = cbss_msmp.RunCbssMSMP(grids, starts, targets, dests, configs)
 
     print(res_dict)
 
     return
+
+
+def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters):
+    from viz import rendering
+    sz = len(grids)
+    a = 6
+    viewer = rendering.Viewer(1200, 1200)
+
+    render_geoms = []
+    render_geoms_xform = []
+
+    for agent in range(len(current_agent_positions)):
+        geom = rendering.make_circle(radius=10)
+        xform = rendering.Transform()
+        geom.set_color(*COLORS[agent%10], alpha=1)
+        geom.add_attr(xform)
+        render_geoms.append(geom)
+        render_geoms_xform.append(xform)
+
+    for target in range(len(targets)):
+        geom = rendering.make_polygon(v=[(-a,-a),(-a,a),(a,a),(a,-a)])
+        xform = rendering.Transform()
+        geom.set_color(0,1,0, alpha=1)
+        geom.add_attr(xform)
+        render_geoms.append(geom)
+        render_geoms_xform.append(xform)
+
+    for agent in range(len(dests)):
+        geom = rendering.make_polygon(v=[(-a,-a),(0,a),(a,-a)])
+        xform = rendering.Transform()
+        geom.set_color(*COLORS[agent%10], alpha=1)
+        geom.add_attr(xform)
+        render_geoms.append(geom)
+        render_geoms_xform.append(xform)
+
+
+    # add geoms to viewer
+    viewer.geoms = []
+    for geom in render_geoms:
+        viewer.add_geom(geom)
+
+    results = []
+    # update bounds to center around agent
+    cam_range = 1
+    pos = np.zeros(2)
+    # viewer.set_bounds(-600, 600, -600, 600)
+    # viewer.set_bounds(pos[0] - cam_range, pos[0] + cam_range, pos[1] - cam_range,
+    #                            pos[1] + cam_range)
+    # update geometry positions
+    for i in range(len(current_agent_positions)):
+        x, y = current_agent_positions[i] % sz, current_agent_positions[i] // sz
+        render_geoms_xform[i].set_translation(x*100, y*100)
+    for i in range(len(targets)):
+        x, y = targets[i] % sz, targets[i] // sz
+        render_geoms_xform[len(current_agent_positions) + i].set_translation(x*100, y*100)
+    for i in range(len(dests)):
+        x, y = dests[i] % sz, dests[i] // sz
+        render_geoms_xform[len(current_agent_positions) + len(targets) + i].set_translation(x*100, y*100)
+    # render to display or array
+    results.append(viewer.render(return_rgb_array=True))
+
+    return np.squeeze(np.array(results))
 
 
 def get_gif():
@@ -61,6 +130,7 @@ def get_gif():
 
 def create_gif(grids, targets, dests, ac_dict, clusters, path):
     from moviepy.editor import ImageSequenceClip
+    sz = len(grids)
     n = len(dests)  # number of robots
     max_time = 0
     for i in range(n):
@@ -70,24 +140,30 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
     for i in range(n):
         agent_paths.append(list(zip(path[i][0], path[i][1])))
 
-    filenames = []
+    # filenames = []
+    gif_images = []
 
     for timestep in range(max_time + 1):
+        print("tick tock", timestep)
         current_agent_positions = []
         for i in range(n):
             if timestep < len(agent_paths[i]):
                 x, y = agent_paths[i][timestep]
             else:
                 x, y = agent_paths[i][-1]
-            current_agent_positions.append(10*y + x)
+            current_agent_positions.append(sz*y + x)
 
-        filename = f'{timestep}.png'
-        filenames.append(filename)
-        visualize_grid(grids, current_agent_positions, targets, dests, ac_dict, clusters, filename)
+        # filename = f'{timestep}.png'
+        # filenames.append(filename)
+        # visualize_grid(grids, current_agent_positions, targets, dests, ac_dict, clusters, filename)
+        results = gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters)
+        gif_images.append(results)
 
+    clip = ImageSequenceClip(list(gif_images), fps=0.002)
+    clip.write_gif('gym1.gif')
     # build gif
-    clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
-    clip.write_gif('loop.gif')#, loop=5)
+    # clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
+    # clip.write_gif('loop.gif')#, loop=5)
 
     # with imageio.get_writer('mygif.gif', mode='I') as writer:
     #     for filename in filenames:
@@ -101,47 +177,57 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
 
 
 def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=None):
-    fig, axs = plt.subplots(10, 10)
+    sz = len(grids)
+    print("fine till here")
+    fig, axs = plt.subplots(sz, sz)
+    print("cool")
     plt.subplots_adjust(wspace=0, hspace=0)
+    print("go")
     # plt.figure(figsize=(5, 5))
     # plt.imshow(grids)
+    # if not clusters:
+    #     clusters = np.arange(len(starts))
 
     colors = ['red', 'blue', 'yellow', 'green', 'turquoise']
 
     cluster_colors = ['grey', 'orange', 'pink', 'brown']
 
+    print("draw starts")
     for agent_num in range(len(starts)):
         point = starts[agent_num]
         if point in targets and (point not in ac_dict or agent_num in ac_dict[point]):
             visited.add(point)
-        x, y = int(point / 10), point % 10
+        x, y = int(point / sz), point % sz
         circle = patches.Circle((0.5, 0.5), 0.3, linewidth=2, edgecolor=colors[agent_num], facecolor=colors[agent_num])
-        axs[9 - x, y].add_patch(circle)
+        axs[sz - 1 - x, y].add_patch(circle)
 
+    print("draw targets")
     for i in range(len(targets)):
         point = targets[i]
-        x, y = int(point / 10), point % 10
+        x, y = int(point / sz), point % sz
         if point in visited:
             facecolor = 'white'
         else:
-            facecolor = cluster_colors[clusters[i]]
+            facecolor = cluster_colors[clusters[i]%4]
         rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2,
-                                 edgecolor=cluster_colors[clusters[i]], facecolor=facecolor)
-        axs[9 - x, y].add_patch(rect)
+                                 edgecolor=cluster_colors[clusters[i]%4], facecolor=facecolor)
+        axs[sz - 1 - x, y].add_patch(rect)
 
     points = np.where(grids == 1)
     # GRIDS (mark obstacles)
+    print("draw obstacles")
     for i in range(len(points[0])):
         x, y = points[0][i], points[1][i]
         rect = patches.Rectangle((0, 0), 1, height=1, linewidth=2, edgecolor='black', facecolor='black')
-        axs[9 - x, y].add_patch(rect)
+        axs[sz - 1 - x, y].add_patch(rect)
 
     i = 0
+    print("draw dests")
     for point in dests:
-        x, y = int(point / 10), point % 10
+        x, y = int(point / sz), point % sz
         triangle = patches.RegularPolygon((0.5, 0.5), 3, radius=0.3, linewidth=2, edgecolor=colors[i],
                                           facecolor=colors[i])
-        axs[9 - x, y].add_patch(triangle)
+        axs[sz - 1 - x, y].add_patch(triangle)
         i += 1
 
 
@@ -162,16 +248,19 @@ def run_CBSS_MCPF():
     With assignment constraints.
     """
     print("------run_CBSS_MCPF------")
-    ny = 10
-    nx = 10
-    grids = np.zeros((ny, nx))
-    grids[5, 3:7] = 1  # obstacles
 
-    starts = [11, 22, 33, 88, 99]
-    targets = [72, 81, 83, 40, 38, 27, 66]
-    dests = [46, 69, 19, 28, 37]
+    if DATASET_GIVEN:
+        starts, dests, targets, grids, cluster_target_map = get_world()
+    else:
+        ny = 10
+        nx = 10
+        starts = [11, 22, 33, 88, 99]
+        targets = [72, 81, 83, 40, 38, 27, 66]
+        dests = [46, 69, 19, 28, 37]
+        grids = np.zeros((ny, nx))
+        grids[5, 3:7] = 1  # obstacles
 
-    cluster_target_map =  [0, 3, 1, 1, 0, 2, 3]
+        cluster_target_map =  [0, 3, 1, 1, 0, 2, 3]
 
     print("SETUP AT START")
     # visualize_grid(grids, starts, targets, dests, ac_dict=None, clusters=cluster_target_map)
@@ -196,7 +285,7 @@ def run_CBSS_MCPF():
     configs["mtsp_atLeastOnce"] = 1
     # this determines whether the k-best TSP step will visit each node for at least once or exact once.
     configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-    configs["time_limit"] = 60
+    configs["time_limit"] = 60 * 5
     configs["eps"] = 0.0
 
     res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, cluster_target_map, ac_dict, configs)
@@ -208,6 +297,7 @@ def run_CBSS_MCPF():
         print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
               path[agent][2])
 
+    # gym_viz(current_agent_positions=starts, grids=grids, targets=targets, dests=dests, ac_dict=ac_dict, clusters=cluster_target_map)
     create_gif(grids, targets, dests, ac_dict, cluster_target_map, res_dict['path_set'])
     # get_gif()
 
