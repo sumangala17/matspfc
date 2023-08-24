@@ -25,7 +25,7 @@ import common as cm
 from dataset import get_world
 
 visited = set()
-DATASET_GIVEN = False# True
+DATASET_GIVEN = True
 
 COLORS = [[0,0,1],[0,1,0],[1,0,0],
           [1,1,0],[1,0,1],[0,1,1],
@@ -60,27 +60,40 @@ def run_CBSS_MSMP():
     return
 
 
-def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters):
+def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters, grid_geoms, grid_xform, grid_list):
     from viz import rendering
     sz = len(grids)
-    a = 6
-    viewer = rendering.Viewer(1200, 1200)
+    a = 3
+    viewer = rendering.Viewer(1050, 1050)
 
     render_geoms = []
     render_geoms_xform = []
 
     for agent in range(len(current_agent_positions)):
-        geom = rendering.make_circle(radius=10)
+        geom = rendering.make_circle(radius=a)
         xform = rendering.Transform()
         geom.set_color(*COLORS[agent%10], alpha=1)
         geom.add_attr(xform)
         render_geoms.append(geom)
         render_geoms_xform.append(xform)
 
+        point = current_agent_positions[agent]
+        if point in visited:
+            continue
+        if point in targets and (point not in ac_dict or agent in ac_dict[point]):
+            visited.add(point)
+            point_idx = targets.index(point)
+            for other_point_idx in range(len(targets)):
+                if clusters[point_idx] == clusters[other_point_idx]:   # change color of other points in the visited cluster
+                    visited.add(targets[other_point_idx])
+
     for target in range(len(targets)):
         geom = rendering.make_polygon(v=[(-a,-a),(-a,a),(a,a),(a,-a)])
         xform = rendering.Transform()
-        geom.set_color(0,1,0, alpha=1)
+        if targets[target] in visited:
+            geom.set_color(0.75,0.75,0.75, alpha=0.5)
+        else:
+            geom.set_color(*COLORS[clusters[target%10]])
         geom.add_attr(xform)
         render_geoms.append(geom)
         render_geoms_xform.append(xform)
@@ -94,6 +107,11 @@ def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters):
         render_geoms_xform.append(xform)
 
 
+    # extend list for grids
+    render_geoms.extend(grid_geoms)
+    render_geoms_xform.extend(grid_xform)
+
+
     # add geoms to viewer
     viewer.geoms = []
     for geom in render_geoms:
@@ -101,21 +119,31 @@ def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters):
 
     results = []
     # update bounds to center around agent
-    cam_range = 1
-    pos = np.zeros(2)
+    # cam_range = 1
+    # pos = np.zeros(2)
     # viewer.set_bounds(-600, 600, -600, 600)
     # viewer.set_bounds(pos[0] - cam_range, pos[0] + cam_range, pos[1] - cam_range,
     #                            pos[1] + cam_range)
     # update geometry positions
     for i in range(len(current_agent_positions)):
         x, y = current_agent_positions[i] % sz, current_agent_positions[i] // sz
-        render_geoms_xform[i].set_translation(x*100, y*100)
+        render_geoms_xform[i].set_translation(x*4, y*4)
     for i in range(len(targets)):
         x, y = targets[i] % sz, targets[i] // sz
-        render_geoms_xform[len(current_agent_positions) + i].set_translation(x*100, y*100)
+        render_geoms_xform[len(current_agent_positions) + i].set_translation(x*4, y*4)
     for i in range(len(dests)):
         x, y = dests[i] % sz, dests[i] // sz
-        render_geoms_xform[len(current_agent_positions) + len(targets) + i].set_translation(x*100, y*100)
+        render_geoms_xform[len(current_agent_positions) + len(targets) + i].set_translation(x*4, y*4)
+    k = len(current_agent_positions) + len(targets) + len(dests)
+    c = 0
+    for i,j in grid_list:
+        render_geoms_xform[k + c].set_translation(j * 4, i * 4)
+        c += 1
+    # for i in range(len(grids)):
+    #     for j in range(len(grids[0])):
+    #         if grids[i][j] == 1:
+    #             render_geoms_xform[k + c].set_translation(i * 4, j * 4)
+    #             c += 1
     # render to display or array
     results.append(viewer.render(return_rgb_array=True))
 
@@ -127,6 +155,7 @@ def get_gif():
     filenames = ['{}.png'.format(i) for i in range(26)]
     clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
     clip.write_gif('clip2.gif', loop=5)
+
 
 def create_gif(grids, targets, dests, ac_dict, clusters, path):
     from moviepy.editor import ImageSequenceClip
@@ -143,6 +172,25 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
     # filenames = []
     gif_images = []
 
+    num_obstacles = np.count_nonzero(grids)
+    from viz import rendering
+    a = 2
+    grid_geom = []
+    grid_xform = []
+    for i in range(num_obstacles):
+        geom = rendering.make_polygon(v=[(-a, -a), (-a, a), (a, a), (a, -a)])
+        xform = rendering.Transform()
+        geom.set_color(0, 0, 0, alpha=1)
+        geom.add_attr(xform)
+        grid_geom.append(geom)
+        grid_xform.append(xform)
+
+    grid_list = []
+    for i in range(len(grids)):
+        for j in range(len(grids[0])):
+            if grids[i][j] == 1:
+                grid_list.append((i,j))
+
     for timestep in range(max_time + 1):
         print("tick tock", timestep)
         current_agent_positions = []
@@ -156,7 +204,7 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
         # filename = f'{timestep}.png'
         # filenames.append(filename)
         # visualize_grid(grids, current_agent_positions, targets, dests, ac_dict, clusters, filename)
-        results = gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters)
+        results = gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters, grid_geom, grid_xform, grid_list)
         gif_images.append(results)
 
     clip = ImageSequenceClip(list(gif_images), fps=0.002)
@@ -267,8 +315,7 @@ def run_CBSS_MCPF():
 
     ac_dict = dict()
     ri = 0
-    for k in targets:
-        ac_dict[k] = set([0, 1])
+    for k in targets[:len(targets)//2]:
         ac_dict[k] = set([ri, ri + 1])
         ri += 1
         if ri >= len(starts) - 1:
@@ -296,6 +343,7 @@ def run_CBSS_MCPF():
     for agent in path:
         print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
               path[agent][2])
+
 
     # gym_viz(current_agent_positions=starts, grids=grids, targets=targets, dests=dests, ac_dict=ac_dict, clusters=cluster_target_map)
     create_gif(grids, targets, dests, ac_dict, cluster_target_map, res_dict['path_set'])
