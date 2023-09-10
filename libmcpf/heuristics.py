@@ -37,14 +37,34 @@ class PathHeuristic:
         closest_point_on_path = agent_id
         closest_idx = -1
 
-        # find the target in existing agent_path target list closest to the given target
-        for i in range(len(self.agent_path[agent_id])):
-            target_id = self.agent_path[agent_id][i]
-            current_dist = self.cost_matrix[self.N + target_id][v_in_spmat]
-            if current_dist < min_dist:
-                min_dist = current_dist
-                closest_point_on_path = self.N + target_id
-                closest_idx = i
+        target_id_list = np.array(self.agent_path[agent_id]) + self.N
+        dist_list = self.cost_matrix[target_id_list, v_in_spmat]
+        # print("dl", dist_list, "and target id list is", target_id_list)
+        # min_dist1 = np.min(dist_list)
+        closest_idx_temp = np.argmin(dist_list)
+        min_dist1_temp = dist_list[closest_idx_temp]
+        if min_dist1_temp < min_dist:
+            min_dist = min_dist1_temp
+            closest_idx = closest_idx_temp
+            closest_point_on_path = target_id_list[closest_idx]
+        # print("mindist = ", min_dist, "closest target = ", closest_point_on_path)
+
+        # min_dist = self.cost_matrix[agent_id][v_in_spmat]
+        # closest_point_on_path = agent_id
+        # closest_idx = -1
+        # # find the target in existing agent_path target list closest to the given target
+        # for i in range(len(self.agent_path[agent_id])):
+        #     target_id = self.agent_path[agent_id][i]
+        #     print("we are considering target", self.N + target_id, "which should be present in target id list above")
+        #     current_dist = self.cost_matrix[self.N + target_id][v_in_spmat]
+        #     if current_dist < min_dist:
+        #         min_dist = current_dist
+        #         closest_point_on_path = self.N + target_id
+        #         closest_idx = i
+        #         print("updating loop mindist..", min_dist, closest_point_on_path)
+        #
+        # print("mindist = ", min_dist, "closest target = ", closest_point_on_path)
+        # print("equal?", min_dist==min_dist1, closest_point_on_path==closest_point_on_path1)
 
         # check if v to destination is closer than v to any target
         current_dist = self.cost_matrix[v_in_spmat][ag_dest_spmat]
@@ -58,7 +78,6 @@ class PathHeuristic:
             original_cost = self.cost_matrix[agent_id][self.N + self.agent_path[agent_id][0]]
             new_cost = min_dist + self.cost_matrix[v_in_spmat][self.N + self.agent_path[agent_id][0]]
             return new_cost - original_cost, 0
-
 
         if closest_point_on_path >= len(self.agent_path[agent_id]):
             next_to_closest = self.N + self.agent_path[agent_id][-1]
@@ -133,12 +152,12 @@ class PathHeuristic:
         valid_num = target_agent_mat[target_agent_mat < INF_M]
         valid_num -= BIG_M
         avg_cost = np.mean(valid_num)
-        std_cost = np.std(valid_num)
+        # std_cost = np.std(valid_num)
         cost_bound = avg_cost #+ 0.2 * std_cost
 
         target_agent_mat -= BIG_M
 
-        copy_mat = copy.deepcopy(target_agent_mat)
+        # copy_mat = copy.deepcopy(target_agent_mat)
         bad_pairs = np.argwhere(target_agent_mat >= cost_bound)
         # print(target_agent_mat, target_agent_mat.shape,"Bad pairs", bad_pairs, bad_pairs.shape)
 
