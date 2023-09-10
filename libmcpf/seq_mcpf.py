@@ -26,7 +26,7 @@ class SeqMCPF():
     are disjoint sets to each other.
   """
 
-  def __init__(self, grid, starts, goals, dests, clusters, ac_dict, configs):
+  def __init__(self, grid, starts, goals, dests, clusters, ac_dict, configs, spMat):
     """
     """
     ### make a copy
@@ -40,6 +40,8 @@ class SeqMCPF():
     # self.lkh_file_name = lkh_file_name
     self.configs = configs
     self.tsp_exe = configs["tsp_exe"]
+
+    self.spMat = spMat
 
     ### aux vars
     self.setStarts = set(self.starts)
@@ -59,7 +61,10 @@ class SeqMCPF():
     self.setOe = set()
 
   def InitTargetGraph(self):
-    self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    # mat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests)
+    # print(mat == self.spMat)
+    if self.spMat is None:
+      self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
     self.V = self.starts + self.goals + self.dests
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
@@ -498,7 +503,7 @@ class SeqMCPF():
     self.set_intra_cluster_costs()
     temp = copy.deepcopy(self.cost_mat)
     temp[temp > 10000] = -1
-    print("COST MATRIX\n", temp)
+    # print("COST MATRIX\n", temp)
     ###
     return
 

@@ -1,7 +1,7 @@
 import numpy as np
-# import pandas as pd
-import pandas
-from pandas import read_fwf
+import pandas as pd
+# import pandas
+# from pandas import read_fwf
 
 def get_world():
 
@@ -12,7 +12,7 @@ def get_world():
 
     with open(path_to_dataset) as f:
         # next(f)
-        df = pandas.read_csv(path_to_dataset, delimiter='\t', header=None, index_col=False, skiprows=1)
+        df = pd.read_csv(path_to_dataset, delimiter='\t', header=None, index_col=False, skiprows=1)
 
     # print(df)
 
@@ -26,7 +26,8 @@ def get_world():
     sz = 256
     starts = []
     dests = []
-    for i in range(10):
+    num_agents = 10#15
+    for i in range(num_agents):
         x, y = start_x[i], start_y[i]
         starts.append(sz * y + x)
         dests.append(sz * goal_y[i] + goal_x[i])
@@ -34,7 +35,7 @@ def get_world():
     print("Starts:", starts)
     print("Dests:", dests)
 
-    num_targets = 10
+    num_targets = 10#30
     # Next 20 are targets
     targets = []
     for i in range(50, num_targets // 2 + 50):
@@ -60,10 +61,8 @@ def get_world():
     grids = np.loadtxt(grid_file_new)
     # print(grids, grids.shape)
 
-    # clusters = np.random.randint(0, high=4, size=num_targets)
+    # clusters = np.random.randint(0, high=5, size=num_targets)
     clusters = np.arange(num_targets)
     print("Clusters:",clusters)
 
     return starts, dests, targets, grids, clusters
-
-get_world()

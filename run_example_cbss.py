@@ -23,6 +23,7 @@ import imageio
 import common as cm
 
 from dataset import get_world
+from libmcpf import heuristics
 
 visited = set()
 DATASET_GIVEN = True
@@ -127,17 +128,17 @@ def gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters, g
     # update geometry positions
     for i in range(len(current_agent_positions)):
         x, y = current_agent_positions[i] % sz, current_agent_positions[i] // sz
-        render_geoms_xform[i].set_translation(x*4, y*4)
+        render_geoms_xform[i].set_translation(x*2*a, y*2*a)
     for i in range(len(targets)):
         x, y = targets[i] % sz, targets[i] // sz
-        render_geoms_xform[len(current_agent_positions) + i].set_translation(x*4, y*4)
+        render_geoms_xform[len(current_agent_positions) + i].set_translation(x*2*a, y*2*a)
     for i in range(len(dests)):
         x, y = dests[i] % sz, dests[i] // sz
-        render_geoms_xform[len(current_agent_positions) + len(targets) + i].set_translation(x*4, y*4)
+        render_geoms_xform[len(current_agent_positions) + len(targets) + i].set_translation(x*2*a, y*2*a)
     k = len(current_agent_positions) + len(targets) + len(dests)
     c = 0
     for i,j in grid_list:
-        render_geoms_xform[k + c].set_translation(j * 4, i * 4)
+        render_geoms_xform[k + c].set_translation(j * 2*a, i * 2*a)
         c += 1
     # for i in range(len(grids)):
     #     for j in range(len(grids[0])):
@@ -207,8 +208,8 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
         results = gym_viz(grids, current_agent_positions, targets, dests, ac_dict, clusters, grid_geom, grid_xform, grid_list)
         gif_images.append(results)
 
-    clip = ImageSequenceClip(list(gif_images), fps=0.002)
-    clip.write_gif('gym1.gif')
+    clip = ImageSequenceClip(list(gif_images), fps=0.004)
+    clip.write_gif('gym_heuristic.gif')
     # build gif
     # clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
     # clip.write_gif('loop.gif')#, loop=5)
@@ -308,7 +309,7 @@ def run_CBSS_MCPF():
         grids = np.zeros((ny, nx))
         grids[5, 3:7] = 1  # obstacles
 
-        cluster_target_map =  [0, 3, 1, 1, 0, 2, 3]
+        cluster_target_map = np.arange(7)  # [0, 3, 1, 1, 0, 2, 3]
 
     print("SETUP AT START")
     # visualize_grid(grids, starts, targets, dests, ac_dict=None, clusters=cluster_target_map)
@@ -335,9 +336,22 @@ def run_CBSS_MCPF():
     configs["time_limit"] = 60 * 5
     configs["eps"] = 0.0
 
-    res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, cluster_target_map, ac_dict, configs)
+    spMat = None
+    # print("AC DICT OLD", ac_dict)
+    # time_heuristic = time.time()
+    # ac_dict, spMat = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, cluster_target_map).get_updated_ac_dict()
+    # print("time taken by heuristic = ", time.time() - time_heuristic)
+    # print("AC DICT NEW", ac_dict)
 
-    print(res_dict)
+    time_cbss = time.time()
+    res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, cluster_target_map, ac_dict, configs, spMat)
+    print("Time taken by CBSS = ", time.time() - time_cbss)
+
+    # print("Therefore, total time = ", time_heuristic + time_cbss)
+
+    for key, value in res_dict.items():
+        if key in ['best_g_value', 'open_list_size', 'num_low_level_expanded', 'search_success', 'search_time', 'n_tsp_call', 'n_tsp_time', 'n_roots']:
+            print(key, '\t=\t', value)
 
     path = res_dict['path_set']
     for agent in path:

@@ -1,4 +1,5 @@
 import copy
+import time
 
 import numpy as np
 import libmcpf.common as cm
@@ -17,7 +18,8 @@ class PathHeuristic:
         self.ac_dict = ac_dict
         self.grids = grids
         self.clusters = clusters
-        self.cost_matrix = cm.getTargetGraph(grids, starts, targets, dests)
+        self.spMat = cm.getTargetGraph(grids, starts, targets, dests)
+        self.cost_matrix = copy.deepcopy(self.spMat)
 
         self.agent_path = [[] for _ in range(self.N)]
 
@@ -47,24 +49,6 @@ class PathHeuristic:
             min_dist = min_dist1_temp
             closest_idx = closest_idx_temp
             closest_point_on_path = target_id_list[closest_idx]
-        # print("mindist = ", min_dist, "closest target = ", closest_point_on_path)
-
-        # min_dist = self.cost_matrix[agent_id][v_in_spmat]
-        # closest_point_on_path = agent_id
-        # closest_idx = -1
-        # # find the target in existing agent_path target list closest to the given target
-        # for i in range(len(self.agent_path[agent_id])):
-        #     target_id = self.agent_path[agent_id][i]
-        #     print("we are considering target", self.N + target_id, "which should be present in target id list above")
-        #     current_dist = self.cost_matrix[self.N + target_id][v_in_spmat]
-        #     if current_dist < min_dist:
-        #         min_dist = current_dist
-        #         closest_point_on_path = self.N + target_id
-        #         closest_idx = i
-        #         print("updating loop mindist..", min_dist, closest_point_on_path)
-        #
-        # print("mindist = ", min_dist, "closest target = ", closest_point_on_path)
-        # print("equal?", min_dist==min_dist1, closest_point_on_path==closest_point_on_path1)
 
         # check if v to destination is closer than v to any target
         current_dist = self.cost_matrix[v_in_spmat][ag_dest_spmat]
@@ -100,6 +84,7 @@ class PathHeuristic:
     def run_target_assigment_step(self):
         # initialize static matrix
         target_agent_mat = np.ones((self.M, self.N)) * INF_M
+        t1 = time.time()
         for i in range(self.M):
             if self.targets[i] not in self.ac_dict:
                 target_agent_mat[i, :] = np.zeros(self.N)
@@ -107,9 +92,11 @@ class PathHeuristic:
             for j in range(self.N):
                 if j in self.ac_dict[self.targets[i]]:
                     target_agent_mat[i, j] = 0
+        print("LOOP 1:", time.time() - t1)
 
         coord_dict = {}
         # populate static matrix
+        t1 = time.time()
         for t_id in range(self.M):
             for ag_id in range(self.N):
                 if target_agent_mat[t_id][ag_id] == INF_M:
@@ -117,11 +104,13 @@ class PathHeuristic:
                 cost, index = self.find_delta_cost_after_adding_target(ag_id, t_id)
                 target_agent_mat[t_id][ag_id] = cost
                 coord_dict[(t_id, ag_id)] = index
+        print("LOOP 2:", time.time() - t1)
 
         visited_targets = set()
         temp_mat = copy.deepcopy(target_agent_mat)
         # print(temp_mat)
         # i=0
+        t1 = time.time()
         while len(visited_targets) < self.M:
             # print("VIsited targets:", visited_targets)
             # find the least cost target-agent pair and insert into agent_path for agent
@@ -145,6 +134,7 @@ class PathHeuristic:
             # i += 1
             # if i>6:
             #     break
+        print("LOOP 3:", time.time() - t1)
 
         return temp_mat# - BIG_M
 
@@ -177,9 +167,12 @@ class PathHeuristic:
             self.ac_dict[self.targets[t_id]].remove(ag_id)
 
     def get_updated_ac_dict(self):
+        print("Welcome to Heuristic Park!")
+        t1 = time.time()
         target_agent_mat = self.run_target_assigment_step()
         self.run_reduce_nodes_step(target_agent_mat)
-        return self.ac_dict
+        print("Exiting Heuristic park after ", time.time() - t1)
+        return self.ac_dict, self.spMat
 
 
 
