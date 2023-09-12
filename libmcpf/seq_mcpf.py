@@ -26,7 +26,7 @@ class SeqMCPF():
     are disjoint sets to each other.
   """
 
-  def __init__(self, grid, starts, goals, dests, ac_dict, configs):
+  def __init__(self, grid, starts, goals, dests, ac_dict, configs, spMat):
     """
     """
     ### make a copy
@@ -38,6 +38,7 @@ class SeqMCPF():
     # self.lkh_file_name = lkh_file_name
     self.configs = configs
     self.tsp_exe = configs["tsp_exe"]
+    self.spMat = spMat
 
     ### aux vars
     self.setStarts = set(self.starts)
@@ -55,7 +56,8 @@ class SeqMCPF():
     self.setOe = set()
 
   def InitTargetGraph(self):
-    self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    if self.spMat is None:
+      self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
     self.V = self.starts + self.goals + self.dests
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
