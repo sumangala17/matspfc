@@ -92,7 +92,6 @@ class PathHeuristic:
             for j in range(self.N):
                 if j in self.ac_dict[self.targets[i]]:
                     target_agent_mat[i, j] = 0
-        print("LOOP 1:", time.time() - t1)
 
         coord_dict = {}
         # populate static matrix
@@ -104,7 +103,6 @@ class PathHeuristic:
                 cost, index = self.find_delta_cost_after_adding_target(ag_id, t_id)
                 target_agent_mat[t_id][ag_id] = cost
                 coord_dict[(t_id, ag_id)] = index
-        print("LOOP 2:", time.time() - t1)
 
         visited_targets = set()
         temp_mat = copy.deepcopy(target_agent_mat)
@@ -131,19 +129,17 @@ class PathHeuristic:
                 coord_dict[(j, agent)] = index
 
             temp_mat[target, :] += BIG_M
-            # i += 1
-            # if i>6:
-            #     break
-        print("LOOP 3:", time.time() - t1)
 
         return temp_mat# - BIG_M
 
     def run_reduce_nodes_step(self, target_agent_mat):
+        p = 0.2
         valid_num = target_agent_mat[target_agent_mat < INF_M]
         valid_num -= BIG_M
-        avg_cost = np.mean(valid_num)
+        avg_cost = np.median(valid_num)
         # std_cost = np.std(valid_num)
-        cost_bound = avg_cost #+ 0.2 * std_cost
+        # cost_bound = (1-p) * avg_cost + p * std_cost
+        cost_bound = avg_cost
 
         target_agent_mat -= BIG_M
 
@@ -164,12 +160,13 @@ class PathHeuristic:
             # print(t_id, ag_id, self.targets[t_id],'---', self.ac_dict)
             if self.targets[t_id] not in self.ac_dict:
                 self.ac_dict[self.targets[t_id]] = list(np.arange(self.N))
-            self.ac_dict[self.targets[t_id]].remove(ag_id)
+            if len(self.ac_dict[self.targets[t_id]]) > 1:
+                self.ac_dict[self.targets[t_id]].remove(ag_id)
 
     def get_updated_ac_dict(self):
         print("Welcome to Heuristic Park!")
-        t1 = time.time()
+        # t1 = time.time()
         target_agent_mat = self.run_target_assigment_step()
         self.run_reduce_nodes_step(target_agent_mat)
-        print("Exiting Heuristic park after ", time.time() - t1)
+        # print("Exiting Heuristic park after ", time.time() - t1)
         return self.ac_dict#, self.spMat

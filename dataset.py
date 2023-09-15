@@ -3,7 +3,7 @@ import pandas as pd
 # import pandas
 # from pandas import read_fwf
 
-def get_world():
+def get_world(num_agents, num_targets):
 
     scen_folder = '/home/biorobotics/matspfc/datasets/Berlin_1_256.map-scen-random/scen-random/'
     scen_file = 'Berlin_1_256-random-1.scen'
@@ -26,7 +26,7 @@ def get_world():
     sz = 256
     starts = []
     dests = []
-    num_agents = 20
+    # num_agents = 20
     for i in range(num_agents):
         x, y = start_x[i], start_y[i]
         starts.append(sz * y + x)
@@ -35,7 +35,7 @@ def get_world():
     print("Starts:", starts)
     print("Dests:", dests)
 
-    num_targets = 45
+    # num_targets = 20
     # Next 20 are targets
     targets = []
     for i in range(50, num_targets // 2 + 50):

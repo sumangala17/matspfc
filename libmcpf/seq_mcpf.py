@@ -130,6 +130,9 @@ class SeqMCPF():
       return True
     return False
 
+  def get_num_nodes_transformed_graph(self):
+    return len(self.index2agent)  # len(self.index2nodeId), len(self.cost_mat)
+
   def _GetEligibleAgents(self, nid):
     if nid not in self.ac_dict:
       return range(self.num_robot)
