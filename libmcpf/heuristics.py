@@ -63,11 +63,12 @@ class PathHeuristic:
             new_cost = min_dist + self.cost_matrix[v_in_spmat][self.N + self.agent_path[agent_id][0]]
             return new_cost - original_cost, 0
 
-        if closest_point_on_path >= len(self.agent_path[agent_id]):
-            next_to_closest = self.N + self.agent_path[agent_id][-1]
+        if closest_idx == len(self.agent_path[agent_id]) - 1:
+            next_to_closest = self.N + self.M + agent_id  # self.agent_path[agent_id][-1]
         else:
+            # print(closest_idx, len(self.agent_path[agent_id]))
             next_to_closest = self.N + self.agent_path[agent_id][closest_idx + 1]
-        if closest_point_on_path <= 0:
+        if closest_idx <= 0:
             prev_to_closest = agent_id
         else:
             prev_to_closest = self.N + self.agent_path[agent_id][closest_idx - 1]
@@ -81,10 +82,9 @@ class PathHeuristic:
         else:
             return delta_cost_with_next, closest_idx + 1
 
-    def run_target_assigment_step(self):
-        # initialize static matrix
+
+    def init_matrix(self):
         target_agent_mat = np.ones((self.M, self.N)) * INF_M
-        t1 = time.time()
         for i in range(self.M):
             if self.targets[i] not in self.ac_dict:
                 target_agent_mat[i, :] = np.zeros(self.N)
@@ -92,10 +92,15 @@ class PathHeuristic:
             for j in range(self.N):
                 if j in self.ac_dict[self.targets[i]]:
                     target_agent_mat[i, j] = 0
+        return target_agent_mat
+
+
+    def run_target_assigment_step(self):
+        # initialize static matrix
+        target_agent_mat = self.init_matrix()
 
         coord_dict = {}
         # populate static matrix
-        t1 = time.time()
         for t_id in range(self.M):
             for ag_id in range(self.N):
                 if target_agent_mat[t_id][ag_id] == INF_M:
@@ -106,17 +111,10 @@ class PathHeuristic:
 
         visited_targets = set()
         temp_mat = copy.deepcopy(target_agent_mat)
-        # print(temp_mat)
-        # i=0
-        t1 = time.time()
+
         while len(visited_targets) < self.M:
-            # print("VIsited targets:", visited_targets)
             # find the least cost target-agent pair and insert into agent_path for agent
             target, agent = np.unravel_index(temp_mat.argmin(), temp_mat.shape)
-            # print(target, "++")
-            # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            # print(temp_mat)
-            # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             self.agent_path[agent].insert(coord_dict[(target, agent)], target)
             # print("agent path of", agent," is :",  self.agent_path[agent])
             visited_targets.add(target)
@@ -132,18 +130,99 @@ class PathHeuristic:
 
         return temp_mat# - BIG_M
 
+    def reassign_targets(self):
+        # initialize static matrix
+        target_agent_mat = self.init_matrix()
+
+        coord_dict = {}
+        # populate static matrix
+        for t_id in range(self.M):
+            current_ag = -1
+            t_index_in_path = -1
+            for i in range(len(self.agent_path)):
+                if t_id in self.agent_path[i]:
+                    current_ag = i
+                    t_index_in_path = self.agent_path[i].index(t_id)
+                    break
+            prev_node = t_index_in_path - 1 if t_index_in_path > 0 else current_ag
+            next_node = t_index_in_path + 1 if t_index_in_path < len(self.agent_path[current_ag]) - 1 else self.N + self.M + current_ag
+            for ag_id in range(self.N):
+                if target_agent_mat[t_id][ag_id] == INF_M:
+                    continue
+                if ag_id == current_ag:
+                    target_agent_mat[t_id][ag_id] = 0
+                    coord_dict[(t_id, ag_id)] = t_index_in_path
+                    continue
+                cost, index = self.find_delta_cost_after_adding_target(ag_id, t_id)
+                cost += self.cost_matrix[prev_node][next_node] - (self.cost_matrix[prev_node][self.N + t_id]
+                                                                  + self.cost_matrix[self.N + t_id][next_node])
+                target_agent_mat[t_id][ag_id] = cost
+                coord_dict[(t_id, ag_id)] = index
+
+        visited_targets = set()
+        temp_mat = copy.deepcopy(target_agent_mat)
+
+        x = 0
+
+        while len(visited_targets) < self.M:
+            # print("NUMBER VISITED", len(visited_targets),':', visited_targets,'\n', temp_mat)
+            # find the least cost target-agent pair and insert into agent_path for agent
+            target, agent = np.unravel_index(temp_mat.argmin(), temp_mat.shape)
+            t_index_in_path = coord_dict[(target, agent)]
+
+            for i in range(len(self.agent_path)):
+                if target in self.agent_path[i]:
+                    self.agent_path[i].remove(target)
+                    break
+
+            self.agent_path[agent].insert(t_index_in_path, target)
+
+            # print("agent path of", agent," is :",  self.agent_path[agent])
+            visited_targets.add(target)
+            # update the target-agent matrix for the given agent whose path was modified
+            for j in range(self.M):
+                if temp_mat[j][agent] >= INF_M:
+                    continue
+
+                current_ag = -1
+                t_index_in_path = -1
+                for i in range(len(self.agent_path)):
+                    if j in self.agent_path[i]:
+                        current_ag = i
+                        t_index_in_path = self.agent_path[i].index(j)
+                        break
+                # print("t index in path = ", t_index_in_path, "current agent", current_ag, "path length", len(self.agent_path[current_ag]))
+                prev_node = t_index_in_path - 1 if t_index_in_path > 0 else current_ag
+                next_node = t_index_in_path + 1 if t_index_in_path < len(
+                    self.agent_path[current_ag]) - 1 else self.N + self.M + current_ag
+
+                cost, index = self.find_delta_cost_after_adding_target(agent, j)
+                cost += self.cost_matrix[prev_node][next_node] - (self.cost_matrix[prev_node][self.N + j]
+                                                                  + self.cost_matrix[self.N + j][next_node])
+                temp_mat[j][agent] = cost + BIG_M * (temp_mat[j][agent] >= BIG_M) * 2
+                coord_dict[(j, agent)] = index
+
+            temp_mat[target, :] += BIG_M * 2
+            # x+=1
+            # print('==============================', x)
+            # if x>4:
+            #     break
+
+        return temp_mat  # - BIG_M
+
+
     def run_reduce_nodes_step(self, target_agent_mat):
         p = 0.2
         valid_num = target_agent_mat[target_agent_mat < INF_M]
-        valid_num -= BIG_M
-        avg_cost = np.median(valid_num)
-        # std_cost = np.std(valid_num)
+        valid_num -= BIG_M*2
+        avg_cost = np.mean(valid_num)
+        std_cost = np.std(valid_num)
         # cost_bound = (1-p) * avg_cost + p * std_cost
-        cost_bound = avg_cost
+        cost_bound = avg_cost - std_cost
 
-        target_agent_mat -= BIG_M
+        target_agent_mat -= BIG_M * 2
 
-        # copy_mat = copy.deepcopy(target_agent_mat)
+        # bad_pairs = np.argwhere(target_agent_mat >= cost_bound)
         bad_pairs = np.argwhere(target_agent_mat >= cost_bound)
         # print(target_agent_mat, target_agent_mat.shape,"Bad pairs", bad_pairs, bad_pairs.shape)
 
@@ -165,8 +244,12 @@ class PathHeuristic:
 
     def get_updated_ac_dict(self):
         print("Welcome to Heuristic Park!")
+        np.set_printoptions(suppress=True)
         # t1 = time.time()
         target_agent_mat = self.run_target_assigment_step()
+        # for _ in range(5):
+        #     target_agent_mat = self.reassign_targets()
+        #     print("new iter\n", target_agent_mat)
         self.run_reduce_nodes_step(target_agent_mat)
         # print("Exiting Heuristic park after ", time.time() - t1)
         return self.ac_dict#, self.spMat
