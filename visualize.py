@@ -8,8 +8,10 @@ import numpy as np
 visited = set()
 
 
-def create_gif(grids, targets, dests, ac_dict, clusters, path):
+def create_gif(grids, targets, dests, ac_dict, clusters, path, name):
     from moviepy.editor import ImageSequenceClip
+    global visited
+    visited = set()
     sz = len(grids)
     n = len(dests)  # number of robots
     max_time = 0
@@ -62,8 +64,8 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path):
     # clip = ImageSequenceClip(list(gif_images), fps=0.004)
     # clip.write_gif('gym_heuristic1.gif')
     # build gif
-    clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.001)  # .resize(scale)
-    clip.write_gif('loop2.gif', loop=5)
+    clip = ImageSequenceClip([imageio.imread(filename) for filename in filenames], fps=0.002)  # .resize(scale)
+    clip.write_gif('compare_{}.gif'.format(name), loop=5)
 
     # with imageio.get_writer('mygif.gif', mode='I') as writer:
     #     for filename in filenames:
@@ -89,7 +91,7 @@ def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=No
 
     colors = ['red', 'blue', 'yellow', 'green', 'turquoise']
 
-    cluster_colors = ['grey', 'orange', 'pink', 'brown']
+    cluster_colors = ['magenta', 'orange', 'pink', 'brown']
 
     # print("draw starts")
     for agent_num in range(len(starts)):
@@ -105,7 +107,7 @@ def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=No
         point = targets[i]
         x, y = int(point / sz), point % sz
         if point in visited:
-            facecolor = 'white'
+            facecolor = 'grey'
         elif clusters is None:
             facecolor = 'purple'
         else:

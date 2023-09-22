@@ -25,7 +25,7 @@ from dataset import get_world
 
 visited = set()
 
-DATASET_GIVEN = True
+DATASET_GIVEN = False
 
 
 def test_ac(path, ac_dict, targets, num_agents):
@@ -37,7 +37,7 @@ def test_ac(path, ac_dict, targets, num_agents):
     i += 1
   t = 0
   for target in targets:
-    txy = (target%256, int(target/256))
+    txy = (target%10, int(target/10))
     allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
     for ag in allowed_ag:
       if txy in agent_path[ag]:
@@ -55,7 +55,7 @@ def run_CBSS_MCPF():
   """
 
   if DATASET_GIVEN:
-    starts, dests, targets, grids, cluster_target_map = get_world(num_agents=10, num_targets=20)
+    starts, dests, targets, grids, cluster_target_map = get_world(num_agents=15, num_targets=35)
   else:
     ny = 10
     nx = 10
@@ -111,10 +111,11 @@ def run_CBSS_MCPF():
   for agent in path:
     max_step = max(max_step, path[agent][2][-2])
   print("Max step = ", max_step)
-  # for agent in path:
-  #   print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
-  #         path[agent][2])
+  for agent in path:
+    print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
+          path[agent][2])
   test_ac(path, ac_dict, targets, len(starts))
+  create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='main_cbss')
 
   print('_______________________________________________________________________________\n\n')
   print("CBSS Heuristic")
@@ -145,6 +146,7 @@ def run_CBSS_MCPF():
   #         path[agent][2])
 
   test_ac(path, ac_dict, targets, len(starts))
+  create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='heuristic')
   # print(res_dict)
 
   # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])
