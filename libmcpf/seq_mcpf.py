@@ -35,7 +35,7 @@ class SeqMCPF():
     self.goals = goals # i.e. tasks, waypoints.
     self.dests = dests # N destinations.
     self.clusters = clusters  # ID list of cluster ID for corresponding target
-    print("clusters", clusters)
+    # print("clusters", clusters)
     self.ac_dict = ac_dict # assignment constraints.
     # self.lkh_file_name = lkh_file_name
     self.configs = configs
@@ -211,11 +211,11 @@ class SeqMCPF():
   def set_intra_cluster_costs(self):
     self.cluster_mat = copy.deepcopy(self.cost_mat)
     num_clusters = len(set(self.clusters))
-    print("num clusters", num_clusters)
+    # print("num clusters", num_clusters)
 
     for cid in range(num_clusters):
       goal_list = self.cluster2goal[cid]
-      print("Cluster {} has the following goals:".format(cid), goal_list)
+      # print("Cluster {} has the following goals:".format(cid), goal_list)
       for i in range(len(goal_list) - 1):
         if goal_list[i] in self.ac_dict:
           last_agent = sorted(self.ac_dict[goal_list[i]])[-1]
@@ -242,13 +242,13 @@ class SeqMCPF():
 
         # print("we first break old within-goal-nodes edge from last to first for same goal")
         idy_old = self.agentNode2index[(old_first_ag, goal_list[i])]
-        print("bye", last_agent, goal_list[i], " and ", old_first_ag, goal_list[i])
+        # print("bye", last_agent, goal_list[i], " and ", old_first_ag, goal_list[i])
         self.cluster_mat[idx][idy_old] = self.infM
 
         # print("new connection across goals")
         self.cluster_mat[idx][idy] = 0
         self.cluster_mat[idy][idx] = self.infM
-        print("this was executed: ({},{}) --> ({},{})".format(last_agent, goal_list[i], first_agent, goal_list[i+1]), end=',\t')
+        # print("this was executed: ({},{}) --> ({},{})".format(last_agent, goal_list[i], first_agent, goal_list[i+1]), end=',\t')
 
       last_goal = goal_list[-1]
       if last_goal in self.ac_dict:
@@ -269,9 +269,9 @@ class SeqMCPF():
       idy = self.agentNode2index[(first_agent, goal_list[0])]
       # print("we first break old within-goal-nodes edge from last to first for same goal")
       idy_old = self.agentNode2index[(old_first_ag, last_goal)]
-      print("bye", last_agent, last_goal, " and ", old_first_ag, last_goal)
+      # print("bye", last_agent, last_goal, " and ", old_first_ag, last_goal)
       self.cluster_mat[idx][idy_old] = self.infM
-      print("New Edge between ({},{}) --> ({},{})".format(last_agent, last_goal, first_agent, goal_list[0]), end=',\t')
+      # print("New Edge between ({},{}) --> ({},{})".format(last_agent, last_goal, first_agent, goal_list[0]), end=',\t')
       self.cluster_mat[idx][idy] = 0
 
       ngx = len(self.ac_dict[last_goal]) if last_goal in self.ac_dict else self.num_robot
@@ -281,42 +281,6 @@ class SeqMCPF():
       if not (len(goal_list) == 2 and ngx == 1 and ngy == 1):
         self.cluster_mat[idy][idx] = self.infM
 
-
-
-  def set_intra_cluster_costs1(self):
-    self.cluster_mat = copy.deepcopy(self.cost_mat)
-    # for t in range(len(self.clusters)):   # loop over each target
-    #   cid = self.clusters[t]    # cluster id of the current target
-    for cid in range(len(np.unique(self.clusters))):
-      k = len(self.cluster2goal[cid])  # number of goals in this cluster
-
-      for i in range(k):  # loop over each goal in this cluster (home to current target)
-        current_goal = self.cluster2goal[cid][i]
-        if current_goal in self.ac_dict:    # find ordered list of agents eligible to access current goal
-          agent_list = sorted(self.ac_dict[current_goal])
-        else:
-          agent_list = range(self.num_robot)
-
-        # for ag1 in range(len(agent_list) - 1):  # go from agent [0] to [-1] of same goal node
-        #   # for ag2 in range(ag1 + 1, len(agent_list)):
-        #   idx = self.agentNode2index[(agent_list[ag1], current_goal)]
-        #   idy = self.agentNode2index[(agent_list[ag1 + 1], current_goal)]
-        #   self.cluster_mat[idx][idy] = 0
-        #   self.cluster_mat[idy][idx] = self.infM
-
-        last_copy_agent_idx = self.agentNode2index[(agent_list[-1], current_goal)]
-        if i < k - 1:
-          next_goal = self.cluster2goal[cid][i + 1]
-        else:
-          next_goal = self.cluster2goal[cid][0]
-        if next_goal not in self.ac_dict:
-          first_agent_newgoal_eligible = 0
-        else:
-          first_agent_newgoal_eligible = sorted(self.ac_dict[next_goal])[0]
-
-        first_copy_newgoal_agent_idx = self.agentNode2index[(first_agent_newgoal_eligible, next_goal)]
-        self.cluster_mat[(last_copy_agent_idx, first_copy_newgoal_agent_idx)] = 0
-        self.cluster_mat[(first_copy_newgoal_agent_idx, last_copy_agent_idx)] = self.infM
 
   def InitEdges(self):
     """
@@ -400,18 +364,8 @@ class SeqMCPF():
           self.cost_mat[idx,idy] = self.infM
 
     self.set_intra_cluster_costs()
-    np.set_printoptions(suppress=True)
-    # print(self.cost_mat[0],"\n\n++++++++++++++++++++++++++++++++++++++++++\n\n", self.cluster_mat[0])
-    diff = self.cost_mat - self.cluster_mat
-    for i in range(len(diff)):
-      for j in range(len(diff[0])):
-        print(diff[i][j], end='\t')
-      print('\n')
+    # np.set_printoptions(suppress=True)
     self.cost_mat = self.cluster_mat
-    # temp = copy.deepcopy(self.cost_mat)
-    # temp[temp > 10000] = -1
-    # print("COST MATRIX\n", temp)
-    # print(self.cost_mat)
     ### 
     return
 
@@ -446,7 +400,7 @@ class SeqMCPF():
     cost_dict = dict() # the cost of each agent's goal sequences
 
     num_clusters = len(np.unique(self.clusters))
-    print(num_clusters)
+    # print(num_clusters)
     visited = np.zeros(num_clusters)
 
     this_agent = -1

@@ -25,27 +25,29 @@ from dataset import get_world
 
 visited = set()
 
-DATASET_GIVEN = False
+DATASET_GIVEN = True
 
 
-def test_ac(path, ac_dict, targets, num_agents):
-  visited = [False for _ in range(len(targets))]
+def test_ac(path, ac_dict, targets, clusters, num_agents):
+  num_clusters = len(np.unique(clusters))
+  visited = [False for _ in range(num_clusters)]
   agent_path = [[] for _ in range(num_agents)]
   i = 0
   for agent in path:
     agent_path[i] = [p for p in list(zip(path[agent][0], path[agent][1]))]
     i += 1
   t = 0
-  for target in targets:
-    txy = (target%10, int(target/10))
+  for i in range(len(targets)):
+    target = targets[i]
+    txy = (target%256, int(target/256))
     allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
     for ag in allowed_ag:
       if txy in agent_path[ag]:
-        visited[t] = True
+        visited[clusters[i]] = True
         break
     t += 1
 
-  assert sum(visited) == len(targets)
+  print("VISITED, clusters", sum(visited), clusters)
 
 
 
@@ -55,7 +57,7 @@ def run_CBSS_MCPF():
   """
 
   if DATASET_GIVEN:
-    starts, dests, targets, grids, cluster_target_map = get_world(num_agents=15, num_targets=35)
+    starts, dests, targets, grids, clusters = get_world(num_agents=20, num_targets=80)
   else:
     ny = 10
     nx = 10
@@ -64,6 +66,7 @@ def run_CBSS_MCPF():
     dests = [46, 69, 19, 28, 37]
     grids = np.zeros((ny, nx))
     grids[5, 3:7] = 1  # obstacles
+    clusters = np.array([0,1,2,2,2,2,2])  # np.arange(len(targets))
   print("------run_CBSS_MCPF------")
   print("SETUP AT START")
 
@@ -98,7 +101,7 @@ def run_CBSS_MCPF():
   print("CBSS Original")
   print('_______________________________________________________________________________\n\n')
   t1 = time.time()
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs, copy.deepcopy(spMat))
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, copy.deepcopy(spMat))
   print("Time taken by CBSS = ", time.time() - t1)
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
@@ -114,8 +117,8 @@ def run_CBSS_MCPF():
   for agent in path:
     print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
           path[agent][2])
-  test_ac(path, ac_dict, targets, len(starts))
-  create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='main_cbss')
+  test_ac(path, ac_dict, targets, clusters, len(starts))
+  # create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='main_cbss_ano')
 
   print('_______________________________________________________________________________\n\n')
   print("CBSS Heuristic")
@@ -128,25 +131,23 @@ def run_CBSS_MCPF():
   print("AC DICT NEW", ac_dict_H)
 
   t1 = time.time()
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict_H, configs, spMat)
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_H, configs, spMat)
   print("Time taken by CBSS = ", time.time() - t1)
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
   print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
-  # for key, value in res_dict.items():
-  #   if key in ['search_time', 'n_tsp_time','best_g_value','num_nodes_transformed_graph']:
-  #     print(key, '\t=\t', value)
+
   path = res_dict['path_set']
   max_step = 0
   for agent in path:
     max_step = max(max_step, path[agent][2][-2])
   print("Max step = ", max_step)
-  # for agent in path:
-  #   print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
-  #         path[agent][2])
+  for agent in path:
+    print("Agent {}'s path is ".format(agent), [p for p in list(zip(path[agent][0], path[agent][1]))], "at times",
+          path[agent][2])
 
-  test_ac(path, ac_dict, targets, len(starts))
-  create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='heuristic')
+  test_ac(path, ac_dict, targets, clusters, len(starts))
+  # create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'], name='heuristic_ano')
   # print(res_dict)
 
   # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])

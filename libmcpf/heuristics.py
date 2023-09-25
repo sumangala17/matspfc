@@ -218,7 +218,7 @@ class PathHeuristic:
         avg_cost = np.mean(valid_num)
         std_cost = np.std(valid_num)
         # cost_bound = (1-p) * avg_cost + p * std_cost
-        cost_bound = avg_cost - std_cost
+        cost_bound = avg_cost #- std_cost
 
         target_agent_mat -= BIG_M * 2
 
