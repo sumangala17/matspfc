@@ -89,9 +89,10 @@ def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=No
     # if not clusters:
     #     clusters = np.arange(len(starts))
 
-    colors = ['red', 'blue', 'yellow', 'green', 'turquoise']
+    colors = ['red', 'blue', 'yellow', 'green', 'turquoise', 'black', 'maroon', 'violet', 'ochre', 'grey', 'orange',
+              'pink', 'brown', 'magenta', 'grey']
 
-    cluster_colors = ['magenta', 'orange', 'pink', 'brown']
+    cluster_colors = ['grey', 'orange', 'pink', 'brown', 'magenta', 'yellow', 'green', 'turquoise', 'blue', 'black']
 
     # print("draw starts")
     for agent_num in range(len(starts)):
@@ -107,12 +108,13 @@ def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=No
         point = targets[i]
         x, y = int(point / sz), point % sz
         if point in visited:
-            facecolor = 'grey'
+            facecolor = 'white'
         elif clusters is None:
             facecolor = 'purple'
         else:
             facecolor = cluster_colors[clusters[i]%4]
-        rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2, edgecolor=facecolor, facecolor=facecolor)
+        rect = patches.Rectangle((0.25, 0.25), 0.4, height=0.4, linewidth=2,
+                                 edgecolor=cluster_colors[clusters[i]%4], facecolor=facecolor)
         axs[sz - 1 - x, y].add_patch(rect)
 
     points = np.where(grids == 1)

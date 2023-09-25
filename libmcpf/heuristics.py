@@ -238,7 +238,7 @@ class PathHeuristic:
                 continue
             # print(t_id, ag_id, self.targets[t_id],'---', self.ac_dict)
             if self.targets[t_id] not in self.ac_dict:
-                self.ac_dict[self.targets[t_id]] = list(np.arange(self.N))
+                self.ac_dict[self.targets[t_id]] = set(np.arange(self.N))
             if len(self.ac_dict[self.targets[t_id]]) > 1:
                 self.ac_dict[self.targets[t_id]].remove(ag_id)
 

@@ -41,6 +41,9 @@ def get_world(num_agents, num_targets):
     for i in range(50, num_targets // 2 + 50):
         targets.append(sz * start_y[i] + start_x[i])
         targets.append(sz * goal_y[i] + goal_x[i])
+    if num_targets % 2:
+        i = num_targets // 2 + 51
+        targets.append(sz * start_y[i] + start_x[i])
 
     print("Targets:", targets)
 
@@ -61,8 +64,9 @@ def get_world(num_agents, num_targets):
     grids = np.loadtxt(grid_file_new)
     # print(grids, grids.shape)
 
-    # clusters = np.random.randint(0, high=5, size=num_targets)
-    clusters = np.arange(num_targets)
+    # clusters = np.array([2, 8, 8, 6, 6, 9, 6, 5, 5, 3, 4, 3, 1, 6, 3, 9, 3, 3, 4, 4, 8, 3, 2, 9, 6, 7, 3, 0, 0, 2]) # np.random.randint(0, high=10, size=num_targets)
+    clusters = [1, 2, 1, 1, 2, 1, 1, 2, 0, 2] # np.arange(num_targets)
+    # clusters = np.random.randint(0, high=3, size=num_targets)
     print("Clusters:",clusters)
 
     return starts, dests, targets, grids, clusters

@@ -7,25 +7,30 @@ ABOUT: this file constains CBSS-MCPF-AC, which is derived from CBSS (framework) 
 
 import cbss
 import seq_mcpf
+from libmcpf import seq_mcpf_cbss
+
 
 class CbssMCPF(cbss.CbssFramework) :
   """
   """
-  def __init__(self, grids, starts, goals, dests, clusters, ac_dict, configs, spMat):
+  def __init__(self, grids, starts, goals, dests, clusters, ac_dict, configs, spMat, test=False):
     """
     """
     # mtsp_solver = msmp_seq.BridgeLKH_MSMP(grids, starts, goals, dests)
     # mtsp_solver = mcpf_seq.BridgeLKH_MCPF(grids, starts, goals, dests, ac_dict) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
-    self.mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs, spMat) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
+    if test:
+      self.mtsp_solver = seq_mcpf_cbss.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs, spMat)
+    else:
+      self.mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs, spMat) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
     super(CbssMCPF, self).__init__(self.mtsp_solver, grids, starts, goals, dests, dict(), configs)
     return
 
-def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat):
+def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat, test=False):
   """
   starts, targets and dests are all node ID.
   heu_weight and prune_delta are not in use. @2021-05-26
   """
-  ccbs_planner = CbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  ccbs_planner = CbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat, test)
   path_set, search_res = ccbs_planner.Search()
   num_nodes_in_transformed_graph = (ccbs_planner.mtsp_solver.get_num_nodes_transformed_graph()) - 2 * len(starts)
   # print(path_set)
@@ -42,5 +47,9 @@ def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat
   res_dict["n_tsp_call"] = search_res[7]
   res_dict["n_tsp_time"] = search_res[8]
   res_dict["n_roots"] = search_res[9]
+
+  if not test:
+    res_dict["target_assignment"] = ccbs_planner.mtsp_solver.target_assignment
+    res_dict["cluster_target_selection"] = ccbs_planner.mtsp_solver.cluster_target_selection
 
   return res_dict
