@@ -56,8 +56,9 @@ class SeqMCPF():
     self.setOe = set()
 
   def InitTargetGraph(self):
-    if self.spMat is None:
-      self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    # if self.spMat is None:
+    self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    print("SPMAT:\n", self.spMat)
     self.V = self.starts + self.goals + self.dests
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
@@ -73,6 +74,8 @@ class SeqMCPF():
     self.InitTargetGraph()
     self.InitNodes()
     self.InitEdges()
+    print("index 2 agent ", self.index2agent)
+    print("index 2 node id", self.index2nodeId)
     return
 
   def InitNodes(self):
@@ -205,6 +208,7 @@ class SeqMCPF():
         self.cost_mat[idx,idy] = self.infM # inf
       ## from nid1 to a goal, need to set both (idx,idy) and (idy,idx)
       for idy in range(self.num_robot, self.endingIdxGoal):
+        # print("idy", idy)
         nid2 = self.index2nodeId[idy] # a goal
         if self.index2agent[idy] != idx: # agent idx is only allowed to visit its own copy of goals/dests.
           self.cost_mat[idx,idy] = self.infM # inf
@@ -227,6 +231,7 @@ class SeqMCPF():
     ### PART-2, from goals to another goals/dests
     for idx in range(self.num_robot, self.endingIdxGoal): # loop over goals
       nid1 = self.index2nodeId[idx] # must be a goal
+      print("nid nid1", nid1)
       # from nid1 to a goal
       for idy in range(self.num_robot, self.endingIdxGoal):
         nid2 = self.index2nodeId[idy] # another goal
@@ -244,11 +249,20 @@ class SeqMCPF():
       # from nid1 to a dest, need to set both (idx,idy) and (idy,idx)
       for idy in range(self.endingIdxGoal,len(self.index2agent)):
         nid2 = self.index2nodeId[idy] # a destination
+        print("INDEX {} TO {}".format(idx, idy))
+        if nid1 == 63656:
+          print("debug time: agent and index of goal ", nid1, self.index2agent[idx])
+          print("debug time: agent and index of dest ", nid2, self.index2agent[idy])
+          print("next agent = ", self._NextAgent(self.index2agent[idx], nid1))
+          print("dest agent = ", self.index2agent[idy])
         if (self._NextAgent(self.index2agent[idx],nid1) != self.index2agent[idy]):
           # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
           self.cost_mat[idx,idy] = self.infM
           self.cost_mat[idy,idx] = self.infM
         else:
+          print(
+            "we1 found that {} and {} are the same agent corresponding to nodes {} and {}, and so we connected!".format(
+              idy, idx, nid2, nid1))
           self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
           self.cost_mat[idy,idx] = self.infM # cannot move from dest to a goal
 
@@ -268,7 +282,8 @@ class SeqMCPF():
         else:
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
-    # print(self.cost_mat)
+    np.set_printoptions(suppress=True)
+    print("unmodified\n", self.cost_mat)
     ###
     return
 
@@ -326,6 +341,7 @@ class SeqMCPF():
           last_nid = seq[-1]
           seq.append(curr_nid)
           curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
+          print("Node {} ({},{}) assigned to agent {}".format(curr_nid, curr_nid%256, curr_nid//256, curr_agent))
           # print(" else if, append curr seq, seq = ", seq)
           if self.IsDest(curr_nid):
             ## end a sequence for "this_agent"

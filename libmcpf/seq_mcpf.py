@@ -63,14 +63,15 @@ class SeqMCPF():
     self.cluster_target_selection = {}
 
   def InitTargetGraph(self):
-    if self.spMat is None:
-      self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    # if self.spMat is None:
+    self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    print("SPMAT:\n", self.spMat)
     self.V = self.starts + self.goals + self.dests
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
       self.n2i[self.V[i]] = i
     self.bigM = (len(self.starts)+len(self.goals))*np.max(self.spMat)
-    self.infM = 999999
+    self.infM = 9999
     return
 
   def InitMat(self):
@@ -80,6 +81,7 @@ class SeqMCPF():
     self.InitTargetGraph()
     self.InitNodes()
     self.InitEdges()
+    print("i2n==============", self.agentNode2index)
     return
 
   def InitNodes(self):
@@ -370,9 +372,11 @@ class SeqMCPF():
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
 
+    np.set_printoptions(suppress=True)
+    print(self.cost_mat,'\n+++\n')
     self.set_intra_cluster_costs()
-    # np.set_printoptions(suppress=True)
     self.cost_mat = self.cluster_mat
+    print(self.cost_mat)
     ### 
     return
 
@@ -428,7 +432,7 @@ class SeqMCPF():
         this_agent = curr_agent
         curr_cost = 0
         # print("\nAgent {} visits targets: ".format(curr_agent), end='\t')
-        # print(" start a new seq, curr seq = ", seq)
+        print(" start a new seq, curr seq = ", seq)
       else:
         # print(" else ")
         if curr_agent == this_agent: # skip other agents' goals 
@@ -436,13 +440,14 @@ class SeqMCPF():
 
           if curr_nid in self.goal2cluster:
             curr_cluster = self.goal2cluster[curr_nid]
+            print("agent {} encountered target {} in cluster {}".format(curr_agent, curr_nid, curr_cluster))
             if not visited[curr_cluster]:
               seq.append(curr_nid)
               curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
               visited[curr_cluster] = 1
               assert curr_nid not in self.target_assignment
               self.target_assignment[curr_nid] = {curr_agent}
-              # print("Node {} assigned to agent {}".format(curr_nid, curr_agent))
+              print("Node {} ({},{}) assigned to agent {}".format(curr_nid, curr_nid%256, curr_nid//256, curr_agent))
               assert curr_cluster not in self.cluster_target_selection
               self.cluster_target_selection[curr_cluster] = curr_nid
               # print("{} from cluster {},".format(curr_nid, curr_cluster), end='\t')

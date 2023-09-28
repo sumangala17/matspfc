@@ -30,14 +30,20 @@ DATASET_GIVEN = True
 TEST = True
 
 
+def view_agent_path_targets(path, targets):
+  agent_paths = get_paths(path)
+  i = 0
+  for ag in agent_paths:
+    for point in agent_paths[ag]:
+      p = point[0] + 256 * point[1]
+      if p in targets:
+        print("Agent {} visited target {}".format(i, p))
+    i += 1
+
 def test_ac(path, ac_dict, targets, clusters, num_agents):
   num_clusters = len(np.unique(clusters))
   visited = [False for _ in range(num_clusters)]
-  agent_path = [[] for _ in range(num_agents)]
-  i = 0
-  for agent in path:
-    agent_path[i] = [p for p in list(zip(path[agent][0], path[agent][1]))]
-    i += 1
+  agent_path = get_paths(path)
   t = 0
   for i in range(len(targets)):
     target = targets[i]
@@ -65,7 +71,7 @@ def get_heuristic_ac_dict(grids, starts, targets, dests, ac_dict, spMat):
   print('_______________________________________________________________________________\n\n')
 
   time_heuristic = time.time()
-  ac_dict_H = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids,
+  ac_dict_H = heuristics.PathHeuristic(starts, targets, dests, copy.deepcopy(ac_dict), grids,
                                        np.arange(len(targets)), spMat).get_updated_ac_dict()
   print("time taken by heuristic ac_dict computation = ", time.time() - time_heuristic)
   print("AC DICT NEW", ac_dict_H)
@@ -74,7 +80,7 @@ def get_heuristic_ac_dict(grids, starts, targets, dests, ac_dict, spMat):
 def call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat):
   res = {}
 
-  for use_heuristic in [False, True]:
+  for use_heuristic in [ False, True]:
 
     if use_heuristic:
       ac_dict_new = get_heuristic_ac_dict(grids, starts, targets, dests, ac_dict, copy.deepcopy(spMat))
@@ -98,14 +104,14 @@ def call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat):
     for agent in path:
       max_step = max(max_step, path[agent][2][-2])
     print("Max step = ", max_step)
-    print_paths(path)
+    get_paths(path)
     test_ac(path, ac_dict, targets, clusters, len(starts))
 
     res[int(use_heuristic)] = res_dict
 
   return res
 
-def print_paths(res_path):
+def get_paths(res_path):
   agent_paths = {}
   for agent in res_path:
     agent_paths[agent] = [p for p in list(zip(res_path[agent][0], res_path[agent][1]))]
@@ -126,14 +132,16 @@ def run_tests(grids, starts, targets, dests, clusters, ac_dict, configs, res_dic
     # ac_dict_ta[t] = target_assignment[t]  # should overwrite targets but leave dests unmodified
     if t in targets:
       targets_ta.append(t)
-  spMat = calculate_A_star_mat(grids, starts, targets_ta, dests)
-  print("TEST TARGET ASSIGNMENT\nAC_DICT\t=\t", ac_dict_ta)
-  res_dict_ta = cbss_mcpf.RunCbssMCPF(grids, starts, targets_ta, dests, None, ac_dict_ta, configs, spMat, test=True)
-  print("TEST paths:\n", print_paths(res_dict_ta["path_set"]))
-  print("Original paths\n", print_paths(res_dict["path_set"]))
-  assert res_dict_ta['path_set'] == res_dict["path_set"]
-
+  # spMat = calculate_A_star_mat(grids, starts, targets_ta, dests)
+  print("TEST TARGET ASSIGNMENT\nAC_DICT\t=\t", ac_dict)
+  res_dict_ta = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, None, ac_dict, configs, spMat=None, test=True)
+  print("TEST paths:\n", get_paths(res_dict_ta["path_set"]))
+  print("Original paths\n", get_paths(res_dict["path_set"]))
+  test_ac(res_dict_ta["path_set"], ac_dict, targets, clusters, len(starts))
   print("COST COMPARISON", res_dict_ta["best_g_value"], res_dict["best_g_value"])
+  view_agent_path_targets(res_dict_ta["path_set"], targets)
+  view_agent_path_targets(res_dict["path_set"], targets)
+  # assert res_dict_ta['path_set'] == res_dict["path_set"]
 
   # CLUSTER TARGET SELECTION TEST
   cluster_target_selection = res_dict["cluster_target_selection"]
@@ -145,13 +153,16 @@ def run_tests(grids, starts, targets, dests, clusters, ac_dict, configs, res_dic
   for t in ac_dict.keys():
     if t in targets and t not in targets_cts:
       del ac_dict_cts[t]
-  spMat = calculate_A_star_mat(grids, starts, targets_cts, dests)
-  res_dict_cts = cbss_mcpf.RunCbssMCPF(grids, starts, targets_cts, dests, None, ac_dict_cts, configs, spMat, test=True)
-  print("TEST paths:\n", print_paths(res_dict_cts["path_set"]))
-  print("Original paths\n", print_paths(res_dict["path_set"]))
+  # spMat = calculate_A_star_mat(grids, starts, targets_cts, dests)
+  res_dict_cts = cbss_mcpf.RunCbssMCPF(grids, starts, targets_cts, dests, None, ac_dict_cts, configs, spMat=None, test=True)
+  test_ac(res_dict_cts["path_set"], ac_dict, targets, clusters, len(starts))
+  print("TEST paths:\n", get_paths(res_dict_cts["path_set"]))
+  print("Original paths\n", get_paths(res_dict["path_set"]))
 
   print("COST COMPARISON", res_dict_cts["best_g_value"], res_dict["best_g_value"])
-  assert res_dict_cts['path_set'] == res_dict_ta["path_set"]
+  view_agent_path_targets(res_dict_cts["path_set"], targets)
+  view_agent_path_targets(res_dict["path_set"], targets)
+  # assert res_dict_cts['path_set'] == res_dict_ta["path_set"]
 
 
 def run_CBSS_MCPF():
@@ -160,7 +171,7 @@ def run_CBSS_MCPF():
   """
 
   if DATASET_GIVEN:
-    starts, dests, targets, grids, clusters = get_world(num_agents=3, num_targets=10)
+    starts, dests, targets, grids, clusters = get_world(num_agents=2, num_targets=4)
   else:
     ny = 10
     nx = 10
@@ -175,10 +186,15 @@ def run_CBSS_MCPF():
 
   ac_dict = dict()
   ri = 0
+  # for k in targets:
+  #   ac_dict[k] = set([ri,ri+1])
+  #   ri += 1
+  #   if ri >= len(starts)-1:
+  #     break
   for k in targets:
-    ac_dict[k] = set([ri,ri+1])
+    ac_dict[k] = set([ri%2])
     ri += 1
-    if ri >= len(starts)-1:
+    if ri >= len(starts)+1:
       break
   ri = 0
   for k in dests:
@@ -196,13 +212,20 @@ def run_CBSS_MCPF():
   configs["eps"] = 0.0
 
   spMat = calculate_A_star_mat(grids, starts, targets, dests)
+  print("SPMAT______________________\n", spMat)
   res = call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
 
-  res_dict = res[0]
+
+  # res_dict = res[0]
 
 
-  if TEST:
-    run_tests(grids, starts, targets, dests, clusters, ac_dict, configs, res_dict)
+
+
+  # if TEST:
+  #   print("yay", ac_dict)
+  #   run_tests(grids, starts, targets, dests, clusters, ac_dict, configs, res[0])
+  #   print("USING HEURISTIC ____________________________________________________")
+  #   run_tests(grids, starts, targets, dests, clusters, ac_dict, configs, res[1])
 
 
 

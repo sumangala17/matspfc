@@ -66,6 +66,8 @@ def get_world(num_agents, num_targets):
 
     # clusters = np.array([2, 8, 8, 6, 6, 9, 6, 5, 5, 3, 4, 3, 1, 6, 3, 9, 3, 3, 4, 4, 8, 3, 2, 9, 6, 7, 3, 0, 0, 2]) # np.random.randint(0, high=10, size=num_targets)
     clusters = [1, 2, 1, 1, 2, 1, 1, 2, 0, 2] # np.arange(num_targets)
+    clusters = [0,1,2, 0]
+    clusters = [1,0,2, 0]
     # clusters = np.random.randint(0, high=3, size=num_targets)
     print("Clusters:",clusters)
 
