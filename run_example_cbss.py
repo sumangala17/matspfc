@@ -171,7 +171,7 @@ def run_CBSS_MCPF():
   """
 
   if DATASET_GIVEN:
-    starts, dests, targets, grids, clusters = get_world(num_agents=2, num_targets=4)
+    starts, dests, targets, grids, clusters = get_world(num_agents=15, num_targets=30, num_clusters=6)
   else:
     ny = 10
     nx = 10
@@ -186,16 +186,16 @@ def run_CBSS_MCPF():
 
   ac_dict = dict()
   ri = 0
-  # for k in targets:
-  #   ac_dict[k] = set([ri,ri+1])
-  #   ri += 1
-  #   if ri >= len(starts)-1:
-  #     break
   for k in targets:
-    ac_dict[k] = set([ri%2])
+    ac_dict[k] = set([ri,ri+1])
     ri += 1
-    if ri >= len(starts)+1:
+    if ri >= len(starts)-1:
       break
+  # for k in targets:
+  #   ac_dict[k] = set([ri%2])
+  #   ri += 1
+  #   if ri >= len(starts)+1:
+  #     break
   ri = 0
   for k in dests:
     ac_dict[k] = set([ri])
@@ -204,7 +204,7 @@ def run_CBSS_MCPF():
 
   configs = dict()
   configs["problem_str"] = "msmp"
-  configs["mtsp_fea_check"] = 1
+  configs["mtsp_fea_check"] = 0
   configs["mtsp_atLeastOnce"] = 1
     # this determines whether the k-best TSP step will visit each node for at least once or exact once.
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
@@ -212,8 +212,8 @@ def run_CBSS_MCPF():
   configs["eps"] = 0.0
 
   spMat = calculate_A_star_mat(grids, starts, targets, dests)
-  print("SPMAT______________________\n", spMat)
-  res = call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  # print("SPMAT______________________\n", spMat)
+  call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
 
 
   # res_dict = res[0]

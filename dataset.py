@@ -3,7 +3,7 @@ import pandas as pd
 # import pandas
 # from pandas import read_fwf
 
-def get_world(num_agents, num_targets):
+def get_world(num_agents, num_targets, num_clusters):
 
     scen_folder = '/home/biorobotics/matspfc/datasets/Berlin_1_256.map-scen-random/scen-random/'
     scen_file = 'Berlin_1_256-random-1.scen'
@@ -65,10 +65,13 @@ def get_world(num_agents, num_targets):
     # print(grids, grids.shape)
 
     # clusters = np.array([2, 8, 8, 6, 6, 9, 6, 5, 5, 3, 4, 3, 1, 6, 3, 9, 3, 3, 4, 4, 8, 3, 2, 9, 6, 7, 3, 0, 0, 2]) # np.random.randint(0, high=10, size=num_targets)
-    clusters = [1, 2, 1, 1, 2, 1, 1, 2, 0, 2] # np.arange(num_targets)
-    clusters = [0,1,2, 0]
-    clusters = [1,0,2, 0]
-    # clusters = np.random.randint(0, high=3, size=num_targets)
+    # clusters = [1, 2, 1, 1, 2, 1, 1, 2, 0, 2] # np.arange(num_targets)
+    # clusters = [0,1,2, 0]
+    # clusters = [1,0,2, 0]
+    clusters = np.random.randint(0, high=num_clusters, size=num_targets)
+    while not set(np.unique(clusters)) ==set(range(num_clusters)):
+        clusters = np.random.randint(0, high=num_clusters, size=num_targets)
+    clusters = np.arange(num_targets)
     print("Clusters:",clusters)
 
     return starts, dests, targets, grids, clusters
