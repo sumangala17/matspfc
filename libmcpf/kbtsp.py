@@ -66,6 +66,7 @@ class KBestMTSP:
     ### generate initial restricted TSP problem instance.
     self.tsp.InitMat()
     tnow = time.perf_counter()
+    # print("initial solution to TSP")
     flag, lb, seqs_dict, cost_dict = self.tsp.Solve()
     if flag == False:
       print("[ERROR] infeasible case? KBestTSP._Init fails to get a feasible joint sequence!")
@@ -169,6 +170,7 @@ class KBestMTSP:
         if not self._FeasibilityCheck1(rtsp):
           continue # the generated rtsp is obviously infeasible
         # Note: if reach here, the rtsp is not guaranteed to be feasible.
+        # print("run rtsp")
         flag, cval, seqs_dict, cost_dict = self._SolveRTSP(rtsp)
         if DEBUG_KBESTTSP:
           print("[INFO] kbtsp._Expand, RTSP get lag = ", flag, ", cost = ", cval, ", Ie = ", setI, ", Oe = ", setO)
@@ -193,7 +195,7 @@ class KBestMTSP:
     """
     for ek in rtsp.setO:
       if ek in rtsp.setI:
-        print("[INFO] kbtsp._FeaCheck1, filtered ! ", ek, rtsp.node_id)
+        # print("[INFO] kbtsp._FeaCheck1, filtered ! ", ek, rtsp.node_id)
         return False
     return True
 

@@ -69,7 +69,8 @@ class SeqMCPF():
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
       self.n2i[self.V[i]] = i
-    self.bigM = (len(self.starts)+len(self.goals))*np.max(self.spMat)
+    self.bigM = 5000 #(len(self.starts)+len(self.goals))*np.max(self.spMat)
+    # print("bigM = ", self.bigM)
     self.infM = 9999
     return
 
@@ -194,17 +195,12 @@ class SeqMCPF():
 
       # print("next goal", next_goal)
 
-      eligible_agents_next_goal = list(self.ac_dict[next_goal]) if next_goal in self.ac_dict else np.arange(self.num_robot)
+      eligible_agents_next_goal = sorted(list(self.ac_dict[next_goal])) if next_goal in self.ac_dict else np.arange(self.num_robot)
       next_agent = eligible_agents_next_goal[0]
 
       # print("eligible and next", eligible_agents_next_goal, next_agent)
 
       return next_goal, next_agent
-
-    print("why did we reach here?", ri, nid)
-    print(self.goal2cluster[nid])
-    print(self.cluster2goal, "are the cluster to goal")
-    print("we may have reached here because eliible agents is ", eligible_agents)
 
   def _NextAgent(self, ri, nid):
     """
@@ -238,13 +234,14 @@ class SeqMCPF():
 
     if ri == eligible_agents[0]:
       cid = self.goal2cluster[nid]
-      goal_index = self.cluster2goal[cid].index(nid)
+      # print("C2G", self.cluster2goal)
+      goal_index = list(self.cluster2goal[cid]).index(nid)
       if goal_index == self.cluster2goal[cid][0]:
         prev_goal = self.cluster2goal[cid][-1]
       else:
         prev_goal = self.cluster2goal[cid][goal_index - 1]
 
-      eligible_agents_prev_goal = self.ac_dict[prev_goal] if prev_goal in self.ac_dict else np.arange(self.num_robot)
+      eligible_agents_prev_goal = sorted(list(self.ac_dict[prev_goal])) if prev_goal in self.ac_dict else np.arange(self.num_robot)
       prev_agent = eligible_agents_prev_goal[-1]
 
       return prev_goal, prev_agent
@@ -270,82 +267,6 @@ class SeqMCPF():
       for k in range(self.num_robot, ri-1, -1):
         if k in self.ac_dict[nid]:
           return k
-
-  def set_intra_cluster_costs(self):
-    self.cluster_mat = copy.deepcopy(self.cost_mat)
-    num_clusters = len(set(self.clusters))
-    # print("num clusters", num_clusters)
-
-    for cid in range(num_clusters):
-      goal_list = self.cluster2goal[cid]
-      # print("Cluster {} has the following goals:".format(cid), goal_list)
-      for i in range(len(goal_list) - 1):
-        if goal_list[i] in self.ac_dict:
-          last_agent = sorted(self.ac_dict[goal_list[i]])[-1]
-          old_first_ag = sorted(self.ac_dict[goal_list[i]])[0]
-          # num_eligible_1 = len(self.ac_dict[goal_list[i]])
-        else:
-          last_agent = self.num_robot - 1
-          old_first_ag = 0
-          # num_eligible_1 = self.num_robot
-
-        if goal_list[i+1] in self.ac_dict:
-          first_agent = sorted(self.ac_dict[goal_list[i+1]])[0]
-          # num_eligible_2 = len(self.ac_dict[goal_list[i+1]])
-        else:
-          first_agent = 0
-          # num_eligible_2 = self.num_robot
-
-        # # the second possibility of 2-node loop [2 goals in cluster, 1 agent eligible per goal]
-        # if num_eligible_1 == 1 and num_eligible_2 == 1:
-        #   self.cluster_mat[idy][idx] = self.infM
-
-        idx = self.agentNode2index[(last_agent, goal_list[i])]
-        idy = self.agentNode2index[(first_agent, goal_list[i+1])]
-
-        # print("we first break old within-goal-nodes edge from last to first for same goal")
-        if old_first_ag != last_agent:
-          idy_old = self.agentNode2index[(old_first_ag, goal_list[i])]
-          # print("bye", last_agent, goal_list[i], " and ", old_first_ag, goal_list[i])
-          self.cluster_mat[idx][idy_old] = self.infM
-
-        # print("new connection across goals")
-        self.cluster_mat[idx][idy] = 0
-        self.cluster_mat[idy][idx] = self.infM
-        # print("this was executed: ({},{}) --> ({},{})".format(last_agent, goal_list[i], first_agent, goal_list[i+1]), end=',\t')
-
-      last_goal = goal_list[-1]
-      if last_goal in self.ac_dict:
-        last_agent = sorted(self.ac_dict[last_goal])[-1]
-        old_first_ag = sorted(self.ac_dict[last_goal])[0]
-      else:
-        last_agent = self.num_robot - 1
-        old_first_ag = 0
-
-      if goal_list[0] == last_goal:     # the first possibility of 2-node loop [cluster has one goal, 2 agents eligible)
-        continue
-
-      if goal_list[0] in self.ac_dict:
-        first_agent = sorted(self.ac_dict[goal_list[0]])[0]
-      else:
-        first_agent = 0
-      idx = self.agentNode2index[(last_agent, last_goal)]
-      idy = self.agentNode2index[(first_agent, goal_list[0])]
-      # print("we first break old within-goal-nodes edge from last to first for same goal")
-      if old_first_ag != last_agent:
-        idy_old = self.agentNode2index[(old_first_ag, last_goal)]
-        # print("bye", last_agent, last_goal, " and ", old_first_ag, last_goal)
-        self.cluster_mat[idx][idy_old] = self.infM
-      # print("New Edge between ({},{}) --> ({},{})".format(last_agent, last_goal, first_agent, goal_list[0]), end=',\t')
-      self.cluster_mat[idx][idy] = 0
-
-      ngx = len(self.ac_dict[last_goal]) if last_goal in self.ac_dict else self.num_robot
-      ngy = len(self.ac_dict[goal_list[0]]) if goal_list[0] in self.ac_dict else self.num_robot
-
-      # the second possibility of 2-node loop [2 goals in cluster, 1 agent eligible per goal]
-      if not (len(goal_list) == 2 and ngx == 1 and ngy == 1):
-        self.cluster_mat[idy][idx] = self.infM
-
 
   def InitEdges(self):
     """
@@ -453,12 +374,8 @@ class SeqMCPF():
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
 
-    np.set_printoptions(suppress=True)
+    # np.set_printoptions(suppress=True)
     # print(self.cost_mat,'\n+++\n')
-    # self.set_intra_cluster_costs()
-    # self.cost_mat = self.cluster_mat
-    # print(self.cost_mat)
-    ### 
     return
 
   def Solve(self):
@@ -487,6 +404,7 @@ class SeqMCPF():
     """
     break a tour down into task sequences.
     """
+    # print("We entered seqsfromtour and the target assignment was ", self.target_assignment)
     seqs = list()
     seqs_dict = dict()
     cost_dict = dict() # the cost of each agent's goal sequences
@@ -494,6 +412,11 @@ class SeqMCPF():
     num_clusters = len(np.unique(self.clusters))
     # print(num_clusters)
     visited = np.zeros(num_clusters)
+    self.target_assignment = {}
+    self.cluster_target_selection = {}
+    # print("c2g1", self.cluster2goal)
+    # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
 
     this_agent = -1
     curr_cost = 0
@@ -523,15 +446,17 @@ class SeqMCPF():
             curr_cluster = self.goal2cluster[curr_nid]
             # print("agent {} encountered target {} in cluster {}".format(curr_agent, curr_nid, curr_cluster))
             if not visited[curr_cluster]:
+              # print("visited [curr]", visited, curr_cluster, visited[curr_cluster])
               seq.append(curr_nid)
               curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
               visited[curr_cluster] = 1
-              assert curr_nid not in self.target_assignment
+              # print("visited", visited)
+              assert curr_nid not in self.target_assignment, self.target_assignment
               self.target_assignment[curr_nid] = {curr_agent}
-              # print("Node {} ({},{}) assigned to agent {}".format(curr_nid, curr_nid%256, curr_nid//256, curr_agent))
-              assert curr_cluster not in self.cluster_target_selection
+              # print("Node {} ({},{}) assigned to agent {}".format(curr_nid, curr_nid, curr_nid, curr_agent))
+              assert curr_cluster not in self.cluster_target_selection, self.cluster_target_selection
               self.cluster_target_selection[curr_cluster] = curr_nid
-              # print("{} from cluster {},".format(curr_nid, curr_cluster), end='\t')
+              # print("{} from cluster {}\n".format(curr_nid, curr_cluster), end='\t')
           else:
             seq.append(curr_nid)
             self.target_assignment[curr_nid] = {curr_agent}

@@ -181,6 +181,7 @@ class CbssFramework:
     self.tstart = time.perf_counter() # must be re-initialized in Search()
     self.grids = grids
     (self.yd, self.xd) = self.grids.shape
+    self.max_sz = max(self.yd, self.xd)
     self.starts = starts
     self.goals = goals
     self.dests = dests
@@ -356,10 +357,10 @@ class CbssFramework:
     tlimit = self.time_limit - (time.perf_counter() - self.tstart)
     ncs, ecs = self.BacktrackCstrs(nid, ri)
     # plan from start to assigned goals and to dest as specified in goal sequence
-    ssy = int(np.floor(ss/self.xd)) # start y
-    ssx = int(ss%self.xd) # start x
-    ggy = int(np.floor(gg/self.xd)) # goal y
-    ggx = int(gg%self.xd) # goal x
+    ssy = int(np.floor(ss/self.max_sz)) # start y
+    ssx = int(ss%self.max_sz) # start x
+    ggy = int(np.floor(gg/self.max_sz)) # goal y
+    ggx = int(gg%self.max_sz) # goal x
     res_path, sipp_stats = sipp.RunSipp(self.grids, ssx, ssy, \
       ggx, ggy, t0, ignore_goal_cstr, 1.0, 0.0, tlimit, ncs, ecs) # note the t0 here!
     if len(res_path)==0:
@@ -397,8 +398,8 @@ class CbssFramework:
       ly = list()
       lv = self.nodes[nid].sol.GetPath(i)[0]
       for v in lv:
-        y = int(np.floor(v / self.xd))
-        x = int(v % self.xd)
+        y = int(np.floor(v / self.max_sz))
+        x = int(v % self.max_sz)
         ly.append(y)
         lx.append(x)
       lt = self.nodes[nid].sol.GetPath(i)[1]
@@ -428,17 +429,17 @@ class CbssFramework:
     """
     = high level search
     """
-    print("CBSS search begin!")
+    # print("CBSS search begin!")
     self.time_limit = self.configs["time_limit"]
     self.tstart = time.perf_counter()
 
     good = self._GenNewRoot()
     if not good:
+      print("nopt good")
       output_res = [ int(0), float(-1), int(0), int(0), \
         int(self.num_closed_low_level_states), 0, float(time.perf_counter()-self.tstart), \
         int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
       return dict(), output_res
-    
     tnow = time.perf_counter()
     # print("After init, tnow - self.tstart = ", tnow - self.tstart, " tlimit = ", self.time_limit)
     if (tnow - self.tstart > self.time_limit):
@@ -485,7 +486,7 @@ class CbssFramework:
       cstrs = self.FirstConflict(curr_node)
 
       if len(cstrs) == 0: # no conflict, terminates
-        print("! CBSS succeed !")
+        # print("! CBSS succeed !")
         search_success = True
         best_g_value = curr_node.cost
         reached_goal_id = curr_node.id

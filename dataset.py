@@ -38,7 +38,7 @@ def get_world(num_agents, num_targets, num_clusters):
     # num_targets = 20
     # Next 20 are targets
     targets = []
-    for i in range(50, num_targets // 2 + 50):
+    for i in range(100, num_targets // 2 + 100):
         targets.append(sz * start_y[i] + start_x[i])
         targets.append(sz * goal_y[i] + goal_x[i])
     if num_targets % 2:
@@ -71,7 +71,7 @@ def get_world(num_agents, num_targets, num_clusters):
     clusters = np.random.randint(0, high=num_clusters, size=num_targets)
     while not set(np.unique(clusters)) ==set(range(num_clusters)):
         clusters = np.random.randint(0, high=num_clusters, size=num_targets)
-    clusters = np.arange(num_targets)
-    print("Clusters:",clusters)
+    # clusters = np.arange(num_targets)
+    # print("Clusters:",clusters)
 
     return starts, dests, targets, grids, clusters

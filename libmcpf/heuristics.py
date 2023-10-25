@@ -19,7 +19,7 @@ class PathHeuristic:
         self.grids = grids
         self.clusters = clusters
         # self.spMat = cm.getTargetGraph(grids, starts, targets, dests)
-        self.cost_matrix = spMat
+        self.cost_matrix = copy.deepcopy(spMat)
 
         self.agent_path = [[] for _ in range(self.N)]
 
@@ -243,10 +243,11 @@ class PathHeuristic:
                 self.ac_dict[self.targets[t_id]].remove(ag_id)
 
     def get_updated_ac_dict(self):
-        print("Welcome to Heuristic Park!")
+        # print("Welcome to Heuristic Park!")
         np.set_printoptions(suppress=True)
         # t1 = time.time()
         target_agent_mat = self.run_target_assigment_step()
+        # print(target_agent_mat)
         # for _ in range(5):
         #     target_agent_mat = self.reassign_targets()
         #     print("new iter\n", target_agent_mat)

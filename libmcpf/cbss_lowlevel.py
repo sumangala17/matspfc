@@ -166,6 +166,7 @@ class SIPP:
     """
     self.grids = grids
     (self.nyt, self.nxt) = self.grids.shape
+    self.max_sz = max(self.nyt, self.nxt)
     self.state_gen_id = 3 # 1 is start, 2 is goal
     self.t0 = t0 # starting time step.
     self.ignore_goal_cstr = ignore_goal_cstr
@@ -199,8 +200,8 @@ class SIPP:
     """
     Manhattan distance
     """
-    cy = int(np.floor(s.loc/self.nxt)) # curr y
-    cx = int(s.loc%self.nxt) # curr x
+    cy = int(np.floor(s.loc/self.max_sz)) # curr y
+    cx = int(s.loc%self.max_sz) # curr x
     return abs(cy-self.gy) + abs(cx - self.gx)
 
   def GetCost(self, loc, nloc, dt=1):
@@ -222,14 +223,14 @@ class SIPP:
     output a list of states.
     """
     s_ngh = list()
-    cy = int(np.floor(s.loc/self.nxt)) # current x
-    cx = int(s.loc%self.nxt) # current y
+    cy = int(np.floor(s.loc/self.max_sz)) # current x
+    cx = int(s.loc%self.max_sz) # current y
 
     # loop over all four possible actions
     for action_idx in range(len(self.action_set_x)):
       nx = cx+self.action_set_x[action_idx] # next x
       ny = cy+self.action_set_y[action_idx] # next y 
-      nnid = ny*self.nxt+nx
+      nnid = ny*self.max_sz+nx
       if (nx >= self.nxt) or (nx < 0) or (ny >= self.nyt) or (ny < 0): # out of border of grid
         continue
       if (self.grids[ny,nx] > 0): # static obstacle

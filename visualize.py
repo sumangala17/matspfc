@@ -78,12 +78,10 @@ def create_gif(grids, targets, dests, ac_dict, clusters, path, name):
 
 
 def visualize_grid(grids, starts, targets, dests, ac_dict, clusters, filename=None):
-    sz = len(grids)
-    # print("fine till here")
+    # sz = len(grids)
+    sz = max(*grids.shape)
     fig, axs = plt.subplots(sz, sz)
-    # print("cool")
     plt.subplots_adjust(wspace=0, hspace=0)
-    # print("go")
     # plt.figure(figsize=(5, 5))
     # plt.imshow(grids)
     # if not clusters:
