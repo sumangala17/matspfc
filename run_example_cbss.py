@@ -205,7 +205,7 @@ def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
   configs["mtsp_atLeastOnce"] = 1
   # this determines whether the k-best TSP step will visit each node for at least once or exact once.
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60 * 60 * 1
+  configs["time_limit"] = 60 * 40
   configs["eps"] = 0.0
   # load_env = True
 

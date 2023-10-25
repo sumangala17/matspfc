@@ -4,22 +4,27 @@ import random
 import numpy as np
 import pandas as pd
 
-from run_example_cbss import call_CBSS_c
+from run_example_cbss import call_CBSS_c, Results
 
 dataset_names = ["ht_chantry", "maze-32-32-2", "room-32-32-4", "den312d", "empty-16-16"]
 map_size_x = [141, 32, 32, 81, 16]
 map_size_y = [162, 32, 32, 65, 16]
 
-N = [5, 10, 20]                 # num_agents
-M = [10, 15, 25, 45, 70]        # num_targets
-K = [2, 5, 10]                  # num_clusters
+# N = [5, 10, 20]                 # num_agents
+# M = [10, 15, 25, 45, 70]        # num_targets
+# K = [2, 5, 10]                  # num_clusters
 
-results_path_parent = "/home/biorobotics/matspfc/results/"
+#results mini
+N = [3, 6, 12]                 # num_agents
+M = [5, 10, 35]        # num_targets
+K = [3, 8, 15]                  # num_clusters
+
+results_path_parent = "/home/biorobotics/matspfc/results_mini/"
 
 class Unit:
-    def __init__(self, cbss_c, hr):
+    def __init__(self, cbss_c: Results, hr: Results):
         self.res_cbss_c = cbss_c
-        self.res_hr = hr
+        self.res_hr: Results = hr
 
 
 def create_problem_instances(dataset_name, map_size, num_instances=1):
@@ -129,6 +134,6 @@ def create_problem_instances(dataset_name, map_size, num_instances=1):
         # print(df)
 
 if __name__ == '__main__':
-    for d in range(1,len(dataset_names)):
+    for d in range(len(dataset_names)):
         map_size = max(map_size_x[d], map_size_y[d])
         create_problem_instances(dataset_names[d], map_size, 1)
