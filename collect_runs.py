@@ -12,11 +12,14 @@ map_size_y = [162, 32, 32, 65, 16]
 
 N = [5, 10, 20]                 # num_agents
 M = [10, 15, 25, 45, 70]        # num_targets
-# M = [10, 15, 30]
-# K = [3, 6, 10]
 K = [2, 5, 10]                  # num_clusters
 
 results_path_parent = "/home/biorobotics/matspfc/results/"
+
+class Unit:
+    def __init__(self, cbss_c, hr):
+        self.res_cbss_c = cbss_c
+        self.res_hr = hr
 
 
 def create_problem_instances(dataset_name, map_size, num_instances=1):
@@ -104,6 +107,10 @@ def create_problem_instances(dataset_name, map_size, num_instances=1):
                         with open(fpath + f"_h1_run{i}.npy", 'wb') as f:
                             pickle.dump(res_hr, f, pickle.HIGHEST_PROTOCOL)
 
+                        unit = Unit(res_cbss, res_hr)
+                        with open(fpath + f"_h01_run{i}.npy", 'wb') as f:
+                            pickle.dump(unit, f, pickle.HIGHEST_PROTOCOL)
+
                         with open(results_path + f"{dataset_name}_N{num_agents}_M{num_targets}_K{num_clusters}_h0.txt", "w") as f:
                             for line in str(res_cbss.__dict__):
                                 f.write(line)
@@ -122,6 +129,6 @@ def create_problem_instances(dataset_name, map_size, num_instances=1):
         # print(df)
 
 if __name__ == '__main__':
-    for d in range(2,len(dataset_names)):
+    for d in range(1,len(dataset_names)):
         map_size = max(map_size_x[d], map_size_y[d])
         create_problem_instances(dataset_names[d], map_size, 1)
