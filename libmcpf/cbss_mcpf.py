@@ -40,5 +40,6 @@ def RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs):
   res_dict["n_tsp_call"] = search_res[7]
   res_dict["n_tsp_time"] = search_res[8]
   res_dict["n_roots"] = search_res[9]
+  res_dict["num_nodes_transformed_graph"] = len(ccbs_planner.mtsp.index2agent)
 
   return res_dict

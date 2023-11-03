@@ -185,7 +185,7 @@ def run_CBSS_MCPF():
   res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
-  print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value']) #, '\t', res_dict['num_nodes_transformed_graph'])
+  print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
   
   # print(res_dict)
 
