@@ -21,33 +21,39 @@ import dataset
 
 visited = set()
 
-def run_CBSS_MSMP():
-  """
-  fully anonymous case, no assignment constraints.
-  """
-  print("------run_CBSS_MSMP------")
-  ny = 10
-  nx = 10
-  grids = np.zeros((ny,nx))
-  grids[5,3:7] = 1 # obstacles
 
-  starts = [11,22,33,88,99]
-  targets = [40,38,27,66,72,81,83]
-  dests = [19,28,37,46,69]
+def get_paths(res_path):
+    agent_paths = {}
+    for agent in res_path:
+        agent_paths[agent] = [p for p in list(zip(res_path[agent][0], res_path[agent][1]))]
+    return agent_paths
 
-  configs = dict()
-  configs["problem_str"] = "msmp"
-  configs["mtsp_fea_check"] = 1
-  configs["mtsp_atLeastOnce"] = 1
-    # this determines whether the k-best TSP step will visit each node for at least once or exact once.
-  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60
-  configs["eps"] = 0.0
-  res_dict = cbss_msmp.RunCbssMSMP(grids, starts, targets, dests, configs)
-  
-  print(res_dict)
 
-  return
+def test_ac(path, ac_dict, targets, clusters, num_agents, sz):
+    # num_clusters = len(np.unique(clusters))
+    # visited = [False for _ in range(num_clusters)]
+    visited_T = [False for _ in range(len(targets))]
+    agent_path = get_paths(path)
+    t = 0
+    agent_target_assignment = {}
+    for i in range(len(targets)):
+        target = targets[i]
+        txy = (target%sz, int(target/sz))
+        allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
+        for ag in allowed_ag:
+            if txy in agent_path[ag]:
+                # visited[clusters[i]] = True
+                visited_T[i] = True
+                if ag in agent_target_assignment.keys():
+                    agent_target_assignment[ag].append(target)
+                else:
+                    agent_target_assignment[ag] = []
+                break
+    t += 1
+    if sum(visited_T) != len(targets):
+        print("Agents and assigned targets: ", agent_target_assignment)
+        print("Not all Visited!", visited_T)
+
 
 def create_gif(grids, targets, dests, ac_dict, clusters, path):
     from moviepy.editor import ImageSequenceClip
@@ -148,7 +154,20 @@ def run_CBSS_MCPF():
   # grids = np.zeros((ny,nx))
   # grids[5,3:7] = 1 # obstacles
 
-  _, _, _, grids, _ = dataset.get_world(1,1,1)
+  grid_file = '/home/biorobotics/matspfc/datasets/maze-32-32-2.map'
+  grid_file_new = '/home/biorobotics/matspfc/datasets/maze-32-32-2-binary.map'
+
+  with open(grid_file) as file:
+      for i in range(4):
+          next(file)
+      newText = file.read().replace('@', '1 ')
+      newText = newText.replace('.', '0 ')
+      newText = newText
+
+  with open(grid_file_new, 'w') as file:
+      file.write(newText)
+
+  grids = np.loadtxt(grid_file_new)
 
   starts = [79, 613, 372, 555, 755]  # [11,22,33,88,99]
   targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]  # [72,81,83,40,38,27,66]
@@ -186,8 +205,8 @@ def run_CBSS_MCPF():
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
   print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
-  
-  # print(res_dict)
+
+  test_ac(res_dict['path_set'], ac_dict, targets, range(len(targets)), len(starts), len(grids))
 
   # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])
   # create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'])
