@@ -17,6 +17,8 @@ import cbss_mcpf
 import common as cm
 import imageio
 
+import dataset
+
 visited = set()
 
 def run_CBSS_MSMP():
@@ -141,16 +143,21 @@ def run_CBSS_MCPF():
   With assignment constraints.
   """
   print("------run_CBSS_MCPF------")
-  ny = 10
-  nx = 10
-  grids = np.zeros((ny,nx))
-  grids[5,3:7] = 1 # obstacles
+  # ny = 10
+  # nx = 10
+  # grids = np.zeros((ny,nx))
+  # grids[5,3:7] = 1 # obstacles
 
-  starts = [11,22,33,88,99]
-  targets = [72,81,83,40,38,27,66]
-  dests = [46,69,19,28,37]
+  _, _, _, grids, _ = dataset.get_world(1,1,1)
+
+  starts = [79, 613, 372, 555, 755]  # [11,22,33,88,99]
+  targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]  # [72,81,83,40,38,27,66]
+  dests = [865, 654, 993, 323, 1006]  # [46,69,19,28,37]
 
   print("SETUP AT START")
+  print("Starts: ", starts)
+  print("Dests: ", dests)
+  print("Targets: ", targets)
   # visualize_grid(grids, starts, targets, dests)
 
   ac_dict = dict()
@@ -176,11 +183,14 @@ def run_CBSS_MCPF():
   configs["eps"] = 0.0
 
   res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
+
+  print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
+  print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value']) #, '\t', res_dict['num_nodes_transformed_graph'])
   
-  print(res_dict)
+  # print(res_dict)
 
   # visualize_grid(grids, starts, targets, dests, res_dict['path_set'])
-  create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'])
+  # create_gif(grids, targets, dests, ac_dict, clusters=None, path=res_dict['path_set'])
 
   return 
 
@@ -188,7 +198,7 @@ def run_CBSS_MCPF():
 if __name__ == '__main__':
   print("begin of main")
 
-  run_CBSS_MSMP()
+  # run_CBSS_MSMP()
 
   run_CBSS_MCPF()
 
