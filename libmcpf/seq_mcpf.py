@@ -26,7 +26,7 @@ class SeqMCPF():
     are disjoint sets to each other.
   """
 
-  def __init__(self, grid, starts, goals, dests, ac_dict, configs):
+  def __init__(self, grid, starts, goals, dests, clusters, ac_dict, configs):
     """
     """
     ### make a copy
@@ -34,6 +34,7 @@ class SeqMCPF():
     self.starts = starts # input is a list of length N, N = #agents.
     self.goals = goals # i.e. tasks, waypoints.
     self.dests = dests # N destinations.
+    self.clusters = clusters
     self.ac_dict = ac_dict # assignment constraints.
     # self.lkh_file_name = lkh_file_name
     self.configs = configs
@@ -49,6 +50,8 @@ class SeqMCPF():
     self.index2agent = list()
     self.index2nodeId = list()
     self.agentNode2index = dict() # map a tuple of (agent_id, node_id) to a node index.
+    self.goal2cluster = dict()
+    self.cluster2goal = self.init_cluster()
     self.endingIdxGoal = -1 # after InitNodes, index [self.endingIdxGoal-1] in self.index2* is the last goal.
     self.cost_mat = [] # size is known after invoking InitNodes
     self.setIe = set()
@@ -89,13 +92,16 @@ class SeqMCPF():
       idx = idx + 1
 
     ### goals allowed to be visited by each agent
+    goal_index = 0
     for vg in self.goals:
       agent_set = self._GetEligibleAgents(vg)
+      self.goal2cluster[vg] = self.clusters[goal_index]
       for ri in agent_set:
         self.index2agent.append(ri)
         self.index2nodeId.append(vg)
         self.agentNode2index[(ri,vg)] = idx
         idx = idx + 1
+      goal_index += 1
     self.endingIdxGoal = idx
 
     ### dests allowed to be visited by each agent
@@ -108,6 +114,19 @@ class SeqMCPF():
         idx = idx + 1
     self.cost_mat = np.zeros((len(self.index2agent),len(self.index2agent)))
     return
+
+  def init_cluster(self):
+    cluster2goal = {}
+    for i in range(len(self.goals)):
+      cid = self.clusters[i]
+      if cid in cluster2goal:
+        cluster2goal[cid].append(self.goals[i])
+      else:
+        cluster2goal[cid] = [self.goals[i]]
+
+    for key in cluster2goal:
+      cluster2goal[key] = np.array(cluster2goal[key])
+    return cluster2goal
 
   def IsStart(self, nid):
     """
@@ -140,6 +159,38 @@ class SeqMCPF():
     """
     return self.spMat[self.n2i[nid1],self.n2i[nid2]]
 
+  def next_goal_and_agent(self, ri, nid):
+    if nid in self.setStarts:
+      return nid, ri
+
+    eligible_agents = sorted(list(self.ac_dict[nid])) if nid in self.ac_dict else range(self.num_robot)
+    if ri < eligible_agents[-1]:
+      return nid, self._NextAgent(ri, nid)
+
+    if ri == eligible_agents[-1]:
+      # print("was new", nid, ri)
+      cid = self.goal2cluster[nid]
+      # print("cluster id", cid)
+      goal_index = np.where(self.cluster2goal[cid] == nid)[0][0]
+      # print("goal index", goal_index)
+      # print("corresponding cluster to goal", self.cluster2goal[cid])
+      if goal_index == len(self.cluster2goal[cid]) - 1:
+        # print("ok")
+        next_goal = self.cluster2goal[cid][0]
+      else:
+        # print("this")
+        next_goal = self.cluster2goal[cid][goal_index + 1]
+
+      # print("next goal", next_goal)
+
+      eligible_agents_next_goal = sorted(list(self.ac_dict[next_goal])) if next_goal in self.ac_dict else np.arange(
+        self.num_robot)
+      next_agent = eligible_agents_next_goal[0]
+
+      # print("eligible and next", eligible_agents_next_goal, next_agent)
+
+      return next_goal, next_agent
+
   def _NextAgent(self, ri, nid):
     """
     Return the next agent after agent-ri w.r.t node nid 
@@ -161,6 +212,29 @@ class SeqMCPF():
       for k in range(ri+1):
         if k in self.ac_dict[nid]:
           return k
+
+  def prev_goal_and_agent(self, ri, nid):
+    if nid in self.setStarts:
+      return nid, ri
+
+    eligible_agents = sorted(list(self.ac_dict[nid])) if nid in self.ac_dict else np.arange(self.num_robot)
+    if ri > eligible_agents[0]:
+      return nid, self._PrevAgent(ri, nid)
+
+    if ri == eligible_agents[0]:
+      cid = self.goal2cluster[nid]
+      # print("C2G", self.cluster2goal)
+      goal_index = list(self.cluster2goal[cid]).index(nid)
+      if goal_index == self.cluster2goal[cid][0]:
+        prev_goal = self.cluster2goal[cid][-1]
+      else:
+        prev_goal = self.cluster2goal[cid][goal_index - 1]
+
+      eligible_agents_prev_goal = sorted(list(self.ac_dict[prev_goal])) if prev_goal in self.ac_dict else np.arange(
+        self.num_robot)
+      prev_agent = eligible_agents_prev_goal[-1]
+
+      return prev_goal, prev_agent
 
   def _PrevAgent(self, ri, nid):
     """
@@ -225,20 +299,51 @@ class SeqMCPF():
       # from nid1 to a goal
       for idy in range(self.num_robot, self.endingIdxGoal):
         nid2 = self.index2nodeId[idy] # another goal
-        if (self._NextAgent(self.index2agent[idx],nid1) == self.index2agent[idy]):
-          # agent-i's goal to agent-(i+1)'s goal or dest.
-          if (nid1 == nid2):
-            # same goal node, but for diff agents
-            self.cost_mat[idx,idy] = 0
-          else:
-            self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
+
+        ## cluster modification ++
+        next_goal_1, next_agent_1 = self.next_goal_and_agent(self.index2agent[idx], nid1)
+        agent_2 = self.index2agent[idy]
+        is_same_cluster = self.goal2cluster[next_goal_1] == self.goal2cluster[nid2]
+
+        if next_goal_1 == nid2 and next_agent_1 == agent_2:
+          self.cost_mat[idx, idy] = 0  # the next node copy in the cluster zero-cost loop
+        elif next_agent_1 == agent_2 and not is_same_cluster:
+          self.cost_mat[idx, idy] = self.GetDist(next_goal_1, nid2) + self.bigM
         else:
-          # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
-          self.cost_mat[idx,idy] = self.infM
+          self.cost_mat[idx, idy] = self.infM
+
+        ## cluster modification --
+
+        # if (self._NextAgent(self.index2agent[idx],nid1) == self.index2agent[idy]):
+        #   # agent-i's goal to agent-(i+1)'s goal or dest.
+        #   if (nid1 == nid2):
+        #     # same goal node, but for diff agents
+        #     self.cost_mat[idx,idy] = 0
+        #   else:
+        #     self.cost_mat[idx,idy] = self.GetDist(nid1, nid2) + self.bigM
+        # else:
+        #   # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
+        #   self.cost_mat[idx,idy] = self.infM
 
       # from nid1 to a dest, need to set both (idx,idy) and (idy,idx)
       for idy in range(self.endingIdxGoal,len(self.index2agent)):
         nid2 = self.index2nodeId[idy] # a destination
+
+        ## cluster modification ++
+
+        next_goal_1, next_agent_1 = self.next_goal_and_agent(self.index2agent[idx], nid1)
+        agent_2 = self.index2agent[idy]
+
+        if not next_agent_1 == agent_2:
+          # agent-i's goal is only connected to agent-(i+1)'s dest.
+          self.cost_mat[idx, idy] = self.infM
+          self.cost_mat[idy, idx] = self.infM
+        else:
+          self.cost_mat[idx, idy] = self.GetDist(next_goal_1, nid2) + self.bigM
+          self.cost_mat[idy, idx] = self.infM  # cannot move from dest to a goal
+
+        ## cluster modification --
+
         if (self._NextAgent(self.index2agent[idx],nid1) != self.index2agent[idy]):
           # agent-i's goal is only connected to agent-(i+1)'s goal or dest.
           self.cost_mat[idx,idy] = self.infM
@@ -263,7 +368,9 @@ class SeqMCPF():
         else:
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
-    # print(self.cost_mat)
+    print(self.cost_mat[self.cost_mat < self.infM])
+    orig = np.load('costmat_orig.npy')
+    assert np.equal(orig, self.cost_mat).all()
     ### 
     return
 
@@ -272,10 +379,12 @@ class SeqMCPF():
     solve the instance and return the results.
     """
     if ("mtsp_fea_check" in self.configs) and (self.configs["mtsp_fea_check"]==1):
-      if not self.FeaPreCheck1():
-        if DEBUG_SEQ_MCPF > 3:
-          print("[INFO] mtsp FeaPreCheck1 is 0")
-        return 0, [], [], []
+      print("[ERROR] not implemented")
+      sys.exit("[ERROR]")
+      # if not self.FeaPreCheck1():
+      #   if DEBUG_SEQ_MCPF > 3:
+      #     print("[INFO] mtsp FeaPreCheck1 is 0")
+      #   return 0, [], [], []
 
     if_atsp = True
     problem_str = "runtime_files/mcpf"
@@ -415,6 +524,7 @@ class SeqMCPF():
         v2 = ie[1]
         ri = ie[2]
         rk = self._PrevAgent(ri,v2)
+        vk, rk = self.prev_goal_and_agent(ri,v2)
         agent_set = self._GetEligibleAgents(v2)
         for rj in agent_set:
           if (rj == rk): # this is the only case where Ie is OK to happen.

@@ -73,6 +73,10 @@ class KBestMTSP:
     self.n_tsp_call = self.n_tsp_call + 1
     self.n_tsp_time = self.n_tsp_time + dt # this is total time.
 
+    orig = np.load('costmat_orig.npy')
+    print("ALL COOL!")
+    assert np.equal(orig, self.tsp.cost_mat).all()
+
     ### generate a restricted TSP instance
     cval = np.sum(list(cost_dict.values()))
     rtsp = RestrictedTSP(set(), set())
@@ -193,7 +197,8 @@ class KBestMTSP:
     """
     for ek in rtsp.setO:
       if ek in rtsp.setI:
-        print("[INFO] kbtsp._FeaCheck1, filtered ! ", ek, rtsp.node_id)
+        if DEBUG_KBESTTSP:
+          print("[INFO] kbtsp._FeaCheck1, filtered ! ", ek, rtsp.node_id)
         return False
     return True
 

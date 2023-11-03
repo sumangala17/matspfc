@@ -173,6 +173,8 @@ def run_CBSS_MCPF():
   targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]  # [72,81,83,40,38,27,66]
   dests = [865, 654, 993, 323, 1006]  # [46,69,19,28,37]
 
+  clusters = np.arange(len(targets))
+
   print("SETUP AT START")
   print("Starts: ", starts)
   print("Dests: ", dests)
@@ -194,14 +196,12 @@ def run_CBSS_MCPF():
 
   configs = dict()
   configs["problem_str"] = "msmp"
-  configs["mtsp_fea_check"] = 1
-  configs["mtsp_atLeastOnce"] = 1
-    # this determines whether the k-best TSP step will visit each node for at least once or exact once.
+  configs["mtsp_fea_check"] = 0  # optional, help speed up K-best TSP module within CBSS for some cases.
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60
+  configs["time_limit"] = 12
   configs["eps"] = 0.0
 
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
   print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
