@@ -438,7 +438,7 @@ class CbssFramework:
       print("nopt good")
       output_res = [ int(0), float(-1), int(0), int(0), \
         int(self.num_closed_low_level_states), 0, float(time.perf_counter()-self.tstart), \
-        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), -1]
       return dict(), output_res
     tnow = time.perf_counter()
     # print("After init, tnow - self.tstart = ", tnow - self.tstart, " tlimit = ", self.time_limit)
@@ -447,13 +447,14 @@ class CbssFramework:
       search_success = False
       output_res = [ int(0), float(-1), int(0), int(0), \
         int(self.num_closed_low_level_states), 0, float(time.perf_counter()-self.tstart), \
-        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), -1]
       return dict(), output_res
 
     search_success = False
     best_g_value = -1
     reached_goal_id = -1
 
+    num_conflicts = 0
     while True:
       tnow = time.perf_counter()
       rd = len(self.closed_set)
@@ -492,6 +493,8 @@ class CbssFramework:
         reached_goal_id = curr_node.id
         break
 
+      num_conflicts += 1
+
       max_child_cost = 0
       for cstr in cstrs:
         if DEBUG_CBSS:
@@ -526,7 +529,7 @@ class CbssFramework:
 
     output_res = [ int(len(self.closed_set)), float(best_g_value), int(0), int(self.open_list.size()), \
       int(self.num_closed_low_level_states), int(search_success), float(time.perf_counter()-self.tstart),\
-      int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+      int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), num_conflicts]
 
     if search_success:
       return self.ReconstructPath(reached_goal_id), output_res

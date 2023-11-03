@@ -69,9 +69,9 @@ class SeqMCPF():
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
       self.n2i[self.V[i]] = i
-    self.bigM = 5000 #(len(self.starts)+len(self.goals))*np.max(self.spMat)
+    self.bigM = (len(self.starts)+len(self.goals))*np.max(self.spMat)
     # print("bigM = ", self.bigM)
-    self.infM = 9999
+    self.infM = 999999
     return
 
   def InitMat(self):

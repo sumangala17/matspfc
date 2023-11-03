@@ -46,6 +46,7 @@ def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat
   res_dict["n_tsp_time"] = search_res[8]
   res_dict["n_roots"] = search_res[9]
   res_dict["cost_mat"] = ccbs_planner.mtsp_solver.cost_mat
+  res_dict["num_conflicts"] = search_res[10]
 
   # if not test:
     # res_dict["cost_mat"]: ccbs_planner.mtsp_solver.cost_mat

@@ -211,20 +211,25 @@ class PathHeuristic:
         return temp_mat  # - BIG_M
 
 
+    def reduce_nodes_cluster(self, target_agent_mat):
+        print(target_agent_mat)
+
+
     def run_reduce_nodes_step(self, target_agent_mat):
         p = 0.2
         valid_num = target_agent_mat[target_agent_mat < INF_M]
+        print(valid_num)
         valid_num -= BIG_M*2
         avg_cost = np.mean(valid_num)
         std_cost = np.std(valid_num)
         # cost_bound = (1-p) * avg_cost + p * std_cost
-        cost_bound = avg_cost #- std_cost
+        cost_bound = avg_cost - std_cost
 
         target_agent_mat -= BIG_M * 2
 
         # bad_pairs = np.argwhere(target_agent_mat >= cost_bound)
         bad_pairs = np.argwhere(target_agent_mat >= cost_bound)
-        # print(target_agent_mat, target_agent_mat.shape,"Bad pairs", bad_pairs, bad_pairs.shape)
+        print(target_agent_mat, target_agent_mat.shape,"Bad pairs", bad_pairs, bad_pairs.shape)
 
         # for t_id, ag_id in bad_pairs:
         #     if self.targets[t_id] not in self.ac_dict:

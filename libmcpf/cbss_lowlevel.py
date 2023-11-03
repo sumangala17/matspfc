@@ -297,11 +297,11 @@ class SIPP:
     override parent method
     """
     # start state
-    self.s_o = SippState(1, self.sy*self.nxt+self.sx, 0.0, self.t0, np.inf)
+    self.s_o = SippState(1, self.sy*self.max_sz+self.sx, 0.0, self.t0, np.inf)
     if (self.s_o.loc in self.node_constr) and len(self.node_constr[self.s_o.loc]) > 0:
       self.s_o.tb = min(self.node_constr[self.s_o.loc]) - 1 # leave the start node earlier than the min time in node constraints.
     # goal state
-    self.s_f = SippState(2, self.gy*self.nxt+self.gx, -1.0, 0, np.inf)
+    self.s_f = SippState(2, self.gy*self.max_sz+self.gx, -1.0, 0, np.inf)
     if (self.s_f.loc in self.node_constr) and len(self.node_constr[self.s_f.loc]) > 0:
       self.s_f.t = max(self.node_constr[self.s_f.loc]) + 1 # arrive at destination later than the max time in node constraints.
     if DEBUG_MOSTASTAR:
