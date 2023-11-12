@@ -263,7 +263,7 @@ class SeqMCPF():
         else:
           # agent-i's dest is only connected to the next agent's dest.
           self.cost_mat[idx,idy] = self.infM
-    # print(self.cost_mat)
+    print("init edges cost mat:\n", self.cost_mat)
     ### 
     return
 
@@ -279,9 +279,11 @@ class SeqMCPF():
     problem_str = "runtime_files/mcpf"
     if problem_str in self.configs:
       problem_str = self.configs["problem_str"]
+    #print("SOLVE function cost matrix:\n", self.cost_mat)
     tsp_wrapper.gen_tsp_file(problem_str, self.cost_mat, if_atsp)
     res = tsp_wrapper.invoke_lkh(self.tsp_exe, problem_str)
     # print("LKH res:", res)
+    # print("make sure we see destination below this, else we are in trouble!")
     flag, seqs_dict, cost_dict = self.SeqsFromTour(res[0])
     if DEBUG_SEQ_MCPF > 3:
       print("[INFO] mtsp SeqsFromTour is ", flag)
@@ -312,15 +314,18 @@ class SeqMCPF():
         seq.append(curr_nid)
         this_agent = curr_agent
         curr_cost = 0
+        # print(f"Targets assigned to agent {curr_agent}:")
         # print(" start a new seq, curr seq = ", seq)
       else:
         # print(" else ")
         if curr_agent == this_agent: # skip other agents' goals 
           last_nid = seq[-1]
           seq.append(curr_nid)
+          print(curr_nid),
           curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
           # print(" else if, append curr seq, seq = ", seq)
           if self.IsDest(curr_nid):
+            # print("Destination!")
             ## end a sequence for "this_agent"
             seqs_dict[this_agent] = seq
             cost_dict[this_agent] = curr_cost
@@ -331,7 +336,9 @@ class SeqMCPF():
       # the instance becomes infeasible and thus the 
       # tour can not be splitted.
       # E.g. the Ie and Oe do not respect the one-in-a-set rules.
+      # print("case was infeasible.. so it is okay to not see destination / cost dict")
       return 0, dict(), dict()
+    # print("COST DICT in SeqTour", cost_dict, sum(list(cost_dict.values())))
 
     return 1, seqs_dict, cost_dict
 

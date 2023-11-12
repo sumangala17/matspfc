@@ -4,6 +4,7 @@ Version@2021-07
 All Rights Reserved
 ABOUT: this file constains CBSS-MCPF-AC, which is derived from CBSS (framework) and aim to solve MCPF-AC problems.
 """
+import numpy as np
 
 import cbss
 import seq_mcpf
@@ -16,8 +17,8 @@ class CbssMCPF(cbss.CbssFramework) :
     """
     # mtsp_solver = msmp_seq.BridgeLKH_MSMP(grids, starts, goals, dests)
     # mtsp_solver = mcpf_seq.BridgeLKH_MCPF(grids, starts, goals, dests, ac_dict) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
-    mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, ac_dict, configs) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
-    super(CbssMCPF, self).__init__(mtsp_solver, grids, starts, goals, dests, dict(), configs)
+    self.mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, ac_dict, configs) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
+    super(CbssMCPF, self).__init__(self.mtsp_solver, grids, starts, goals, dests, dict(), configs)
     return
 
 def RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs):
@@ -40,5 +41,10 @@ def RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs):
   res_dict["n_tsp_call"] = search_res[7]
   res_dict["n_tsp_time"] = search_res[8]
   res_dict["n_roots"] = search_res[9]
+
+  res_dict["cost_mat"] = ccbs_planner.mtsp_solver.cost_mat
+  # np.save("hard_coded_cost_mat.npy", res_dict["cost_mat"])
+  print("AEIOU!!!", ccbs_planner.mtsp_solver.setIe)
+  print("AEIOU!!!", ccbs_planner.mtsp_solver.setOe)
 
   return res_dict
