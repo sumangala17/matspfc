@@ -73,6 +73,30 @@ def hard_coded_degenerate_cluster_test():
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, inf]], 4: [[9, 8, 8, 8, 8, 8, 8, 8, 7, 7],
   [9, 9, 8, 7, 6, 5, 4, 3, 3, 3], [0, 1, 2, 3, 4, 5, 6, 7, 8, inf]]}
 
+  targets = [72, 96, 83, 40, 38, 27, 66, 70]
+  clusters = [0, 1, 2, 3, 4, 5, 6, 1]
+  res_dict1 = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+
+  assert res_dict1['best_g_value'] == 75, f"best g value was {res_dict1['best_g_value']}"
+  assert res_dict1['num_nodes_transformed_graph'] == 34
+
+  assert res_dict1['path_set'] == res_dict['path_set']
+  # {0: [[1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6, 6], [1, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 4, 4, 4, 4, 4],
+  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, inf]], 1: [[2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 9, 9, 9], [2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6, 6],
+  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, inf]], 2: [[3, 3, 2, 2, 2, 3, 3, 3, 3, 3, 4, 5, 6, 7, 7, 7, 8, 8, 8, 8, 9, 9],
+  # [3, 4, 4, 5, 6, 6, 7, 8, 7, 6, 6, 6, 6, 6, 5, 4, 4, 3, 2, 1, 1, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, inf]],
+  # 3: [[8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8], [8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 5, 4, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+  # [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, inf]], 4: [[9, 8, 8, 8, 8, 8, 8, 8, 7, 7], [9, 9, 8, 7, 6, 5, 4, 3, 3, 3],
+  # [0, 1, 2, 3, 4, 5, 6, 7, 8, inf]]}
+
+  targets = [72, 81, 83, 40, 38, 27, 66, 70]
+  res_dict2 = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+
+  assert res_dict2['best_g_value'] == 75, f"best g value was {res_dict2['best_g_value']}"
+  assert res_dict2['num_nodes_transformed_graph'] == 34
+
+  assert res_dict2['path_set'] == res_dict['path_set']
+
 
 
 def hard_coded_test(res, num_agents, cost_mat, ac_dict):
@@ -125,9 +149,10 @@ def run_CBSS_MCPF():
   # dests = [46,69,19,28,37]
 
   starts = [11, 22, 33, 88, 99]
-  targets = [72, 83, 40, 38, 27, 66, 70]
+  targets = [72, 96, 83, 40, 38, 27, 66, 70]
   dests = [46, 69, 19, 28, 37]
   clusters = np.arange(len(targets))
+  clusters = [0,1,2,3,4,5,6,1]
 
   # clusters = [0,1,2,3,4,5,6,1] #np.arange(len(targets))
 
