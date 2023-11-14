@@ -42,7 +42,8 @@ def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
   assert sum(visited) == len(targets)
 
 
-def hard_coded_test(agent_path, num_agents, cost_mat):
+def hard_coded_test(res, num_agents, cost_mat, ac_dict):
+  agent_path = get_paths(res["path_set"])
   true_paths = {0: [(1, 1), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 6), (2, 5), (2, 5), (2, 4), (3, 4), (4, 4), (5, 4),
   (6, 4), (6, 4)], 1: [(2, 2), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 7), (1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6),
   (9, 6), (9, 6)], 2: [(3, 3), (3, 4), (2, 4), (2, 5), (2, 6), (3, 6), (3, 7), (3, 8), (3, 7), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (7, 5), (7, 4), (8, 4),
@@ -54,6 +55,10 @@ def hard_coded_test(agent_path, num_agents, cost_mat):
 
   true_cost_mat = np.load("hard_coded_cost_mat.npy")
   assert np.array_equal(cost_mat, true_cost_mat)
+
+  assert res["num_nodes_transformed_graph"] == 25
+
+  assert ac_dict == {72: {0}, 81: {1}, 83: {2}, 40: {3}, 38: {4}, 46: {0}, 69: {1}, 19: {2}, 28: {3}, 37: {4}}
 
 def run_CBSS_MCPF():
   """
@@ -82,8 +87,11 @@ def run_CBSS_MCPF():
   # print("grid size", grids.shape)
 
   starts = [11,22,33,88,99]
-  targets = [72,81,83,40,38,27,66]
+  # targets = [72,81,83,40,38,27,66,73]
+  targets = [72,96,83,40,38,27,66,70]
   dests = [46,69,19,28,37]
+
+  clusters = [0,1,2,3,4,5,6,1] #np.arange(len(targets))
 
   # starts = [79, 613, 372, 555, 755]
   # targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]
@@ -108,15 +116,18 @@ def run_CBSS_MCPF():
   configs["time_limit"] = 60
   configs["eps"] = 0.0
 
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, ac_dict, configs)
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+
+  print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
+  print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
 
   path = res_dict["path_set"]
 
-  print(get_paths(res_dict["path_set"]))
-  agent_path = get_paths(res_dict["path_set"])
+  print(res_dict["target_assignment"])
+  print(res_dict["cluster_target_selection"])
   test_targets_visited(path, ac_dict, targets, [], len(starts), nx)
   
-  hard_coded_test(agent_path, len(starts), res_dict["cost_mat"])
+  hard_coded_test(res_dict, len(starts), res_dict["cost_mat"], ac_dict)
 
   return 
 

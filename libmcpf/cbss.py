@@ -485,13 +485,13 @@ class CbssFramework:
       
       cstrs = self.FirstConflict(curr_node)
 
-      print(f"Though our node cost was only {curr_node.cost}, we have {len(cstrs)} constraints")
+      # print(f"Though our node cost was only {curr_node.cost}, we have {len(cstrs)} constraints")
 
       if len(cstrs) == 0: # no conflict, terminates
         print("! CBSS succeed !")
         search_success = True
         best_g_value = curr_node.cost
-        print("Node cost = ", curr_node)
+        # print("Node cost = ", curr_node)
         reached_goal_id = curr_node.id
         break
 

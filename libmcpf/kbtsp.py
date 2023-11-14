@@ -106,10 +106,10 @@ class KBestMTSP:
       temp_tsp.AddOe(ek[0], ek[1], ek[2])
 
     ## solve the RTSP instance
-    print("We SOLVE RTSP!!!!!!!!!!!")
+    # print("We SOLVE RTSP!!!!!!!!!!!")
     tnow = time.perf_counter()
     success, cost_lb, seqs_dict, cost_dict = temp_tsp.Solve()
-    print("cost dict", cost_dict, cost_lb)
+    # print("cost dict", cost_dict, cost_lb)
     if not success:
       # print(" temp_tsp solve success = ", success)
       return success, [], [], []
@@ -118,7 +118,7 @@ class KBestMTSP:
     self.n_tsp_call = self.n_tsp_call + 1
     self.n_tsp_time = self.n_tsp_time + dt # this is total time.
     cval = np.sum(list(cost_dict.values()))
-    print("cval total cost?", cval)
+    # print("cval total cost?", cval)
 
     ### verify against Ie, Oe.
     flag = self._VerifySol(temp_tsp, rtsp.setI, rtsp.setO, seqs_dict)
