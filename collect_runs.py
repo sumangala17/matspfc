@@ -10,16 +10,16 @@ dataset_names = ["ht_chantry", "maze-32-32-2", "room-32-32-4", "den312d", "empty
 map_size_x = [141, 32, 32, 81, 16]
 map_size_y = [162, 32, 32, 65, 16]
 
-# N = [5, 10, 20]                 # num_agents
-# M = [10, 15, 25, 45, 70]        # num_targets
-# K = [2, 5, 10]                  # num_clusters
+N = [5, 15, 25]                 # num_agents
+M = [10, 45, 70]        # num_targets
+K = [2, 5, 10]                  # num_clusters
 
 #results mini
-N = [3, 6, 12]                 # num_agents
-M = [5, 10, 35]        # num_targets
-K = [3, 8, 15]                  # num_clusters
+# N = [3, 6, 12]                 # num_agents
+# M = [5, 10, 35]        # num_targets
+# K = [3, 8, 15]                  # num_clusters
 
-results_path_parent = "/home/biorobotics/matspfc/results_mini/"
+results_path_parent = "/home/biorobotics/matspfc/results_debug/"
 
 class Unit:
     def __init__(self, cbss_c: Results, hr: Results):
@@ -41,7 +41,7 @@ def create_problem_instances(dataset_name, map_size, num_instances=1):
             next(file)
         newText = file.read().replace('@', '1 ')
         newText = newText.replace('.', '0 ')
-        newText = newText.replace('T', '0 ')
+        newText = newText.replace('T', '1 ')
 
     with open(grid_file_new, 'w') as file:
         file.write(newText)
@@ -134,6 +134,6 @@ def create_problem_instances(dataset_name, map_size, num_instances=1):
         # print(df)
 
 if __name__ == '__main__':
-    for d in range(len(dataset_names)):
+    for d in [2]:#range(len(dataset_names)):
         map_size = max(map_size_x[d], map_size_y[d])
         create_problem_instances(dataset_names[d], map_size, 1)

@@ -71,8 +71,8 @@ def gridAstar(grids, start, goal, w=1.0):
   parent_dict[start] = -1
   g_dict = dict()
   g_dict[start] = 0
-  gx = goal % max_sz
-  gy = int(np.floor(goal/max_sz))
+  gx = goal % nxt
+  gy = int(np.floor(goal/nxt))
   search_success = True
   while True:
     if len(open_list) == 0:
@@ -88,8 +88,8 @@ def gridAstar(grids, start, goal, w=1.0):
       break
     # get neighbors
     # action_idx_seq = np.random.permutation(5)
-    cx = cid % max_sz  #nxt
-    cy = int(np.floor(cid / max_sz))
+    cx = cid % nxt  #nxt
+    cy = int(np.floor(cid / nxt))
     for action_idx in range(len(action_set_x)):
       nx = cx + action_set_x[action_idx]
       ny = cy + action_set_y[action_idx]
@@ -97,7 +97,7 @@ def gridAstar(grids, start, goal, w=1.0):
         continue
       if grids[ny,nx] > 0.5:
         continue
-      nid = ny*max_sz+nx
+      nid = ny*nxt+nx
       heu = np.abs(gx-nx) + np.abs(gy-ny) # manhattan heu
       gnew = curr_cost+1
       if (nid) not in close_set:

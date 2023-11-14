@@ -14,12 +14,14 @@ for d in dataset_names:
     res_mat[d] = {
         'N': [], 'M': [], 'K': [], 'Astar_time': [],
         'total_time_cbssc': [], 'total_time_hr': [], 'ntsp_cbssc': [], 'ntsp_hr': [],
-        'cost_cbssc': [], 'cost_hr': [], 'last_ts_cbssc': [], 'last_ts_hr': []
+        'cost_cbssc': [], 'cost_hr': [], 'last_ts_cbssc': [], 'last_ts_hr': [],
+        'conflicts_cbssc': [], 'conflicts_hr': [],
+        'cost up %': [], 'ntsp time down %': []
     }
 
 def read_from_np(dname):
 
-    file_path = "/home/biorobotics/matspfc/results_mini/" + dname + "/numpyfiles/"
+    file_path = "/home/biorobotics/matspfc/results/" + dname + "/numpyfiles/"
     # for file in os.walk("/home/biorobotics/matspfc/results/" + dname + "/numpyfiles/"):
     for filename in os.listdir(file_path):
         if "01" not in filename:
@@ -48,13 +50,26 @@ def read_from_np(dname):
         res_mat[dname]['cost_hr'].append(int(unit.res_hr.cost))
         res_mat[dname]['last_ts_cbssc'].append(int(unit.res_cbss_c.max_step))
         res_mat[dname]['last_ts_hr'].append(int(unit.res_hr.max_step))
+        res_mat[dname]['conflicts_cbssc'].append(int(unit.res_cbss_c.num_conflicts))
+        res_mat[dname]['conflicts_hr'].append(int(unit.res_hr.num_conflicts))
+
+        res_mat[dname]['cost up %'].append((unit.res_hr.cost - unit.res_cbss_c.cost) * 100 / unit.res_cbss_c.cost)
+        res_mat[dname]['ntsp time down %'].append((unit.res_cbss_c.ntsp - unit.res_hr.ntsp) * 100 / unit.res_cbss_c.ntsp)
 
     df = pd.DataFrame(res_mat[dname])#.groupby(['N','M','K','useH','total_time','ntsp','cost','last_ts'])
     # print(df["room-32-32-4"].columns)
-    return df
+    return df#[df['M']>10]
 
 if __name__ == '__main__':
-    # for dname in dataset_names:
-    print(read_from_np(dataset_names[0]))
+
+    for dname in dataset_names:
+        print('_'*190)
+        print(' '*95, dname.upper(), ' '*95)
+        print('_'*190)
+        df = read_from_np(dname)
+        print(df)
+        with pd.ExcelWriter("/home/biorobotics/matspfc/results_mini2/res123.xlsx", mode='a', if_sheet_exists='replace') as writer:
+            df.to_excel(writer, sheet_name=f"Sheet_{dname}")
+
 
 

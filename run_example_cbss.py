@@ -42,21 +42,27 @@ def view_agent_path_targets(path, targets):
     i += 1
 
 def test_ac(path, ac_dict, targets, clusters, num_agents, sz):
-  num_clusters = len(np.unique(clusters))
-  visited = [False for _ in range(num_clusters)]
-  agent_path = get_paths(path)
-  t = 0
-  for i in range(len(targets)):
-    target = targets[i]
-    txy = (target%sz, int(target/sz))
-    allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
-    for ag in allowed_ag:
-      if txy in agent_path[ag]:
-        visited[clusters[i]] = True
-        break
-    t += 1
-
-  # print("VISITED, clusters", sum(visited), clusters)
+    # num_clusters = len(np.unique(clusters))
+    # visited = [False for _ in range(num_clusters)]
+    visited_T = [False for _ in range(len(targets))]
+    agent_path = get_paths(path)
+    target_list_coord = []
+    t = 0
+    for i in range(len(targets)):
+        target = targets[i]
+        txy = (target%sz, int(target/sz))
+        allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
+        for ag in allowed_ag:
+            if txy in agent_path[ag]:
+                # visited[clusters[i]] = True
+                target_list_coord.append((txy, target))
+                visited_T[i] = True
+                break
+        t += 1
+    if sum(visited_T) != len(targets):
+        print("Not all targets were visited!")
+        print("vis targets", visited_T)
+        print("VISITED coords", target_list_coord)
 
 def calculate_A_star_mat(grids, starts, targets, dests):
   # print("Computing spMat")
@@ -66,50 +72,71 @@ def calculate_A_star_mat(grids, starts, targets, dests):
   return spMat
 
 
-def get_heuristic_ac_dict(grids, starts, targets, dests, ac_dict, spMat):
+def get_heuristic_ac_dict(grids, starts, targets, dests, clusters, ac_dict, spMat, alpha):
   # print('_______________________________________________________________________________\n\n')
   # print("CBSS Heuristic")
   # print('_______________________________________________________________________________\n\n')
 
   # time_heuristic = time.time()
   ac_dict_H = heuristics.PathHeuristic(starts, targets, dests, copy.deepcopy(ac_dict), grids,
-                                       np.arange(len(targets)), spMat).get_updated_ac_dict()
+                                       clusters, spMat, alpha).get_updated_ac_dict()
   # print("time taken by heuristic ac_dict computation = ", time.time() - time_heuristic)
   # print("AC DICT NEW", ac_dict_H)
   return ac_dict_H
 
 def call_CBSS(grids, starts, targets, dests, clusters, ac_dict, configs, spMat):
   res = {}
+  print("clusters = ", clusters)
+
+  ac_dict_list = []
 
   for use_heuristic in [ False, True]:
-
-    if use_heuristic:
-      ac_dict_new = get_heuristic_ac_dict(grids, starts, targets, dests, ac_dict, copy.deepcopy(spMat))
-    else:
-      ac_dict_new = copy.deepcopy(ac_dict)
-
     print('_______________________________________________________________________________\n\n')
     print("CBSS || Heuristic used =", use_heuristic)
     print('_______________________________________________________________________________\n\n')
+
+    if use_heuristic:
+      for alpha in [0.2,0.5,0.8,2,3,4,5,6, 7]:
+        print("ALPHA = ", alpha)
+        ac_dict_new = get_heuristic_ac_dict(grids, starts, targets, dests, clusters, copy.deepcopy(ac_dict), copy.deepcopy(spMat), alpha)
+        ac_dict_list.append(ac_dict_new)
+        res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs,
+                                         copy.deepcopy(spMat))
+        print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
+        print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
+        test_ac(res_dict['path_set'], ac_dict_new, targets, clusters, len(starts), 32)
+        print('_'*100)
+    else:
+      ac_dict_new = copy.deepcopy(ac_dict)
+
     t1 = time.time()
 
     # call CBSS
+    # if use_heuristic:
+    #   for ac_dict_new in ac_dict_list:
+        # print("ALPHA = ",)
+        # res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs,
+        #                                  copy.deepcopy(spMat))
+        # print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
+        # print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
     # res_dict1 = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, copy.deepcopy(spMat), True)
-    res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, copy.deepcopy(spMat), False)
 
-    print("Time taken by CBSS = ", time.time() - t1)
-    print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
-    print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
+    if not use_heuristic:
+      res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, copy.deepcopy(spMat))
 
-    path = res_dict['path_set']
-    max_step = 0
-    for agent in path:
-      max_step = max(max_step, path[agent][2][-2])
-    print("Max step = ", max_step)
-    get_paths(path)
-    test_ac(path, ac_dict, targets, clusters, len(starts))
+      print("Time taken by CBSS = ", time.time() - t1)
+      print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
+      print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
 
-    res[int(use_heuristic)] = res_dict
+      path = res_dict['path_set']
+      max_step = 0
+      for agent in path:
+        max_step = max(max_step, path[agent][2][-2])
+      print("Max step = ", max_step)
+      get_paths(path)
+      test_ac(path, ac_dict, targets, clusters, len(starts), len(grids))
+
+      res[int(use_heuristic)] = res_dict
 
   return res
 
@@ -180,7 +207,7 @@ class Results:
         self.is_heuristic = is_heuristic
 
     def set_stats(self, total_time, ntsp, cost, agent_paths, target_assignment, cluster_target_selection, num_nodes,
-                  max_step, Astar_time):
+                  max_step, Astar_time, num_conflicts):
         self.total_time = total_time
         self.ntsp = ntsp
         self.cost = cost
@@ -190,6 +217,7 @@ class Results:
         self.num_nodes = num_nodes
         self.max_step = max_step
         self.Astar_time = Astar_time
+        self.num_conflicts = num_conflicts
 
     def print_stats(self):
         return self.total_time
@@ -205,7 +233,7 @@ def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
   configs["mtsp_atLeastOnce"] = 1
   # this determines whether the k-best TSP step will visit each node for at least once or exact once.
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60 * 40
+  configs["time_limit"] = 60 * 10
   configs["eps"] = 0.0
   # load_env = True
 
@@ -230,7 +258,7 @@ def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
   cbss_c_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=False)
   cbss_c_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
                        res_dict["target_assignment"], res_dict["cluster_target_selection"],
-                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time)
+                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
 
   # Heuristic
 
@@ -248,7 +276,7 @@ def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
   heuristic_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=True)
   heuristic_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
                        res_dict["target_assignment"], res_dict["cluster_target_selection"],
-                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time)
+                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
 
   return cbss_c_res, heuristic_res
 
@@ -260,7 +288,8 @@ def run_CBSS_MCPF():
   """
 
   if DATASET_GIVEN:
-    starts, dests, targets, grids, clusters = get_world(num_agents=5, num_targets=6, num_clusters=4)
+    # starts, dests, targets, grids, clusters = get_world(num_agents=10, num_targets=20, num_clusters=10)  # test fail!
+    starts, dests, targets, grids, clusters = get_world(num_agents=5, num_targets=15, num_clusters=1)
   else:
     ny = 10
     nx = 10
@@ -300,23 +329,23 @@ def run_CBSS_MCPF():
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
   configs["time_limit"] = 60 * 60 * 24
   configs["eps"] = 0.0
-  load_env = True
+  # load_env = True
 
   # cluster_cost_mat_test(configs)
   # return
 
-  if not load_env:
-    spMat = calculate_A_star_mat(grids, starts, targets, dests)
+  # if not load_env:
+  spMat = calculate_A_star_mat(grids, starts, targets, dests)
 
-  filename = "latest.npy"
-  if not load_env:
-    obj = {"starts": starts, "targets": targets, "dests": dests, "clusters": clusters, "spMat": spMat, "grids": grids}
-    np.save(filename, obj, allow_pickle=True)
+  # filename = "latest.npy"
+  # if not load_env:
+  #   obj = {"starts": starts, "targets": targets, "dests": dests, "clusters": clusters, "spMat": spMat, "grids": grids}
+  #   np.save(filename, obj, allow_pickle=True)
 
-  if load_env:
-    print("LOADING FROM latest.py ...")
-    obj = np.load(filename, allow_pickle=True).tolist()
-    starts, targets, dests, clusters, spMat, grids = obj["starts"], obj["targets"], obj["dests"], obj["clusters"], obj["spMat"], obj["grids"]
+  # if load_env:
+  #   print("LOADING FROM latest.py ...")
+  #   obj = np.load(filename, allow_pickle=True).tolist()
+  #   starts, targets, dests, clusters, spMat, grids = obj["starts"], obj["targets"], obj["dests"], obj["clusters"], obj["spMat"], obj["grids"]
 
 
   # print("SPMAT______________________\n", spMat)
@@ -346,12 +375,12 @@ def run_CBSS_MCPF():
   return
 
 
-# if __name__ == '__main__':
-#   print("begin of main")
-#
-#   run_CBSS_MCPF()
-#
-#   print("end of main")
+if __name__ == '__main__':
+  print("begin of main")
+
+  run_CBSS_MCPF()
+
+  print("end of main")
 
 
 

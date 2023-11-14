@@ -8,7 +8,7 @@ INF_M = 10000000
 BIG_M = 10000
 
 class PathHeuristic:
-    def __init__(self, starts, targets, dests, ac_dict, grids, clusters, spMat):
+    def __init__(self, starts, targets, dests, ac_dict, grids, clusters, spMat, alpha):
         self.N = len(starts)
         self.M = len(targets)
 
@@ -20,6 +20,7 @@ class PathHeuristic:
         self.clusters = clusters
         # self.spMat = cm.getTargetGraph(grids, starts, targets, dests)
         self.cost_matrix = copy.deepcopy(spMat)
+        self.alpha = alpha
 
         self.agent_path = [[] for _ in range(self.N)]
 
@@ -210,9 +211,112 @@ class PathHeuristic:
 
         return temp_mat  # - BIG_M
 
+    def reduce_nodes_target(self, target_agent_mat):
+        # print(target_agent_mat)
+
+        alpha = self.alpha
+        print("alpha = ", alpha, "clusters = ", self.clusters)
+
+        valid_num = target_agent_mat[target_agent_mat < INF_M]
+        # print(valid_num)
+        valid_num -= BIG_M * 2
+        avg_cost = np.mean(valid_num)
+        med_cost = np.median(valid_num)
+
+        print("global mean = ", avg_cost)
+
+        target_agent_mat -= BIG_M * 2
+
+        tc_alpha = np.zeros(self.M)
+        tc_2 = np.zeros(self.M)
+        tc_3 = np.zeros(self.M)
+        for t_id in range(self.M):
+            row = target_agent_mat[t_id]
+            good_num = row[row < INF_M / 2]
+            tc_alpha[t_id] = np.mean(good_num)
+            tc_2[t_id] = np.median(good_num)
+            tc_3[t_id] = np.min(good_num)
+
+        # print("target mean = ", tc_alpha)
+
+        if alpha < 1:
+            cost_bound = alpha * tc_alpha + (1 - alpha) * med_cost
+        elif alpha == 2:
+            cost_bound = avg_cost
+        elif alpha == 3:
+            cost_bound = med_cost
+        elif alpha == 4:
+            cost_bound = np.clip(tc_2, a_max=med_cost, a_min=0)
+        elif alpha == 5:
+            cost_bound = (tc_3 + med_cost)/2
+        elif alpha == 6:
+            cost_bound = (tc_3 + avg_cost)/2
+        elif alpha == 7:
+            cost_bound = 100000
+
+
+        for t_id in range(self.M):
+            cb = cost_bound[t_id] if hasattr(cost_bound, "__len__") else cost_bound
+            bad_pairs = np.argwhere(target_agent_mat[t_id] >= cb).reshape(-1)
+            print("Bad pairs", bad_pairs.shape)
+
+            for i in range(len(bad_pairs)):  # target
+                # for j in range(len(bad_pairs[0])):      # agent
+                ag_id = bad_pairs[i]
+                if self.targets[t_id] in self.ac_dict and ag_id not in self.ac_dict[self.targets[t_id]]:
+                    continue
+                # print(t_id, ag_id, self.targets[t_id],'---', self.ac_dict)
+                if self.targets[t_id] not in self.ac_dict:
+                    self.ac_dict[self.targets[t_id]] = set(np.arange(self.N))
+                if len(self.ac_dict[self.targets[t_id]]) > 1:
+                    self.ac_dict[self.targets[t_id]].remove(ag_id)
+
 
     def reduce_nodes_cluster(self, target_agent_mat):
-        print(target_agent_mat)
+        # print(target_agent_mat)
+
+        alpha = self.alpha
+        print("alpha = ", alpha, "clusters = ", self.clusters)
+
+        valid_num = target_agent_mat[target_agent_mat < INF_M]
+        # print(valid_num)
+        valid_num -= BIG_M * 2
+        avg_cost = np.median(valid_num)
+
+        print("global mean = ", avg_cost)
+
+        target_agent_mat -= BIG_M * 2
+
+        cc = np.zeros(np.max(self.clusters) + 1)
+        cnt = np.zeros_like(cc)
+        for t_id in range(self.M):
+            for ag_id in range(self.N):
+                if target_agent_mat[t_id][ag_id] < INF_M/2:
+                    cid = self.clusters[t_id]
+                    cc[cid] += target_agent_mat[t_id][ag_id]
+                    cnt[cid] += 1
+
+        cc = np.divide(cc, cnt)
+
+        print("cluster mean = ", cc)
+
+        cost_bound = alpha * cc + (1 - alpha) * avg_cost
+
+        for t_id in range(self.M):
+            cid = self.clusters[t_id]
+            bad_pairs = np.argwhere(target_agent_mat[t_id] >= cost_bound[cid]).reshape(-1)
+            # print("Bad pairs", bad_pairs, bad_pairs.shape)
+
+            for i in range(len(bad_pairs)):  # target
+                # for j in range(len(bad_pairs[0])):      # agent
+                ag_id = bad_pairs[i]
+                if self.targets[t_id] in self.ac_dict and ag_id not in self.ac_dict[self.targets[t_id]]:
+                    continue
+                # print(t_id, ag_id, self.targets[t_id],'---', self.ac_dict)
+                if self.targets[t_id] not in self.ac_dict:
+                    self.ac_dict[self.targets[t_id]] = set(np.arange(self.N))
+                if len(self.ac_dict[self.targets[t_id]]) > 1:
+                    self.ac_dict[self.targets[t_id]].remove(ag_id)
 
 
     def run_reduce_nodes_step(self, target_agent_mat):
@@ -256,6 +360,8 @@ class PathHeuristic:
         # for _ in range(5):
         #     target_agent_mat = self.reassign_targets()
         #     print("new iter\n", target_agent_mat)
-        self.run_reduce_nodes_step(target_agent_mat)
+        # self.run_reduce_nodes_step(target_agent_mat)
+        # self.reduce_nodes_cluster(target_agent_mat)
+        self.reduce_nodes_target(target_agent_mat)
         # print("Exiting Heuristic park after ", time.time() - t1)
         return self.ac_dict#, self.spMat

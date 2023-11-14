@@ -6,7 +6,8 @@ ABOUT: this file constains CBSS-MCPF-AC, which is derived from CBSS (framework) 
 """
 
 import cbss
-import seq_mcpf
+# import seq_mcpf
+import seq_mcpf_cbss as seq_mcpf
 from libmcpf import seq_mcpf_cbss
 
 
@@ -50,7 +51,7 @@ def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat
 
   # if not test:
     # res_dict["cost_mat"]: ccbs_planner.mtsp_solver.cost_mat
-  res_dict["target_assignment"] = ccbs_planner.mtsp_solver.target_assignment
-  res_dict["cluster_target_selection"] = ccbs_planner.mtsp_solver.cluster_target_selection
+  # res_dict["target_assignment"] = ccbs_planner.mtsp_solver.target_assignment
+  # res_dict["cluster_target_selection"] = ccbs_planner.mtsp_solver.cluster_target_selection
 
   return res_dict

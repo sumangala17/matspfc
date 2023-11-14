@@ -357,10 +357,10 @@ class CbssFramework:
     tlimit = self.time_limit - (time.perf_counter() - self.tstart)
     ncs, ecs = self.BacktrackCstrs(nid, ri)
     # plan from start to assigned goals and to dest as specified in goal sequence
-    ssy = int(np.floor(ss/self.max_sz)) # start y
-    ssx = int(ss%self.max_sz) # start x
-    ggy = int(np.floor(gg/self.max_sz)) # goal y
-    ggx = int(gg%self.max_sz) # goal x
+    ssy = int(np.floor(ss/self.xd)) # start y
+    ssx = int(ss%self.xd) # start x
+    ggy = int(np.floor(gg/self.xd)) # goal y
+    ggx = int(gg%self.xd) # goal x
     res_path, sipp_stats = sipp.RunSipp(self.grids, ssx, ssy, \
       ggx, ggy, t0, ignore_goal_cstr, 1.0, 0.0, tlimit, ncs, ecs) # note the t0 here!
     if len(res_path)==0:
@@ -398,8 +398,8 @@ class CbssFramework:
       ly = list()
       lv = self.nodes[nid].sol.GetPath(i)[0]
       for v in lv:
-        y = int(np.floor(v / self.max_sz))
-        x = int(v % self.max_sz)
+        y = int(np.floor(v / self.xd))
+        x = int(v % self.xd)
         ly.append(y)
         lx.append(x)
       lt = self.nodes[nid].sol.GetPath(i)[1]

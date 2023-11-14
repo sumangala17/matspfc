@@ -200,8 +200,8 @@ class SIPP:
     """
     Manhattan distance
     """
-    cy = int(np.floor(s.loc/self.max_sz)) # curr y
-    cx = int(s.loc%self.max_sz) # curr x
+    cy = int(np.floor(s.loc/self.nxt)) # curr y
+    cx = int(s.loc%self.nxt) # curr x
     return abs(cy-self.gy) + abs(cx - self.gx)
 
   def GetCost(self, loc, nloc, dt=1):
@@ -223,14 +223,14 @@ class SIPP:
     output a list of states.
     """
     s_ngh = list()
-    cy = int(np.floor(s.loc/self.max_sz)) # current x
-    cx = int(s.loc%self.max_sz) # current y
+    cy = int(np.floor(s.loc/self.nxt)) # current x
+    cx = int(s.loc%self.nxt) # current y
 
     # loop over all four possible actions
     for action_idx in range(len(self.action_set_x)):
       nx = cx+self.action_set_x[action_idx] # next x
       ny = cy+self.action_set_y[action_idx] # next y 
-      nnid = ny*self.max_sz+nx
+      nnid = ny*self.nxt+nx
       if (nx >= self.nxt) or (nx < 0) or (ny >= self.nyt) or (ny < 0): # out of border of grid
         continue
       if (self.grids[ny,nx] > 0): # static obstacle
@@ -297,11 +297,11 @@ class SIPP:
     override parent method
     """
     # start state
-    self.s_o = SippState(1, self.sy*self.max_sz+self.sx, 0.0, self.t0, np.inf)
+    self.s_o = SippState(1, self.sy*self.nxt+self.sx, 0.0, self.t0, np.inf)
     if (self.s_o.loc in self.node_constr) and len(self.node_constr[self.s_o.loc]) > 0:
       self.s_o.tb = min(self.node_constr[self.s_o.loc]) - 1 # leave the start node earlier than the min time in node constraints.
     # goal state
-    self.s_f = SippState(2, self.gy*self.max_sz+self.gx, -1.0, 0, np.inf)
+    self.s_f = SippState(2, self.gy*self.nxt+self.gx, -1.0, 0, np.inf)
     if (self.s_f.loc in self.node_constr) and len(self.node_constr[self.s_f.loc]) > 0:
       self.s_f.t = max(self.node_constr[self.s_f.loc]) + 1 # arrive at destination later than the max time in node constraints.
     if DEBUG_MOSTASTAR:
