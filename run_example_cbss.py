@@ -4,6 +4,7 @@ All Rights Reserved.
 ABOUT: Entrypoint to the code.
 Oeffentlich fuer: RSS22
 """
+from math import inf
 
 import context
 import time
@@ -37,9 +38,41 @@ def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
       if txy in agent_path[ag]:
         # visited[clusters[i]] = True
         visited[i] = True
+        print(f"Agent {ag} visited target {target} at timestep {agent_path[ag].index(txy)}")
         break
     t += 1
   assert sum(visited) == len(targets)
+
+
+def hard_coded_degenerate_cluster_test():
+  starts = [11, 22, 33, 88, 99]
+  targets = [72, 83, 40, 38, 27, 66, 70]
+  dests = [46, 69, 19, 28, 37]
+  clusters = np.arange(len(targets))
+  ac_dict = {72: {0}, 83: {2}, 40: {3}, 38: {4}, 46: {0}, 69: {1}, 19: {2}, 28: {3}, 37: {4}}
+  configs = dict()
+  configs["problem_str"] = "msmp"
+  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
+  configs["time_limit"] = 60
+  configs["eps"] = 0.0
+  ny = 10
+  nx = 10
+  grids = np.zeros((ny, nx))
+  grids[5, 3:7] = 1  # obstacles
+
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+
+  assert res_dict['best_g_value'] == 75, f"best g value was {res_dict['best_g_value']}"
+  assert res_dict['num_nodes_transformed_graph'] == 29
+
+  assert res_dict['path_set'] == {0: [[1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6, 6], [1, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 4, 4, 4, 4, 4],
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, inf]], 1: [[2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 9, 9, 9], [2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6, 6],
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, inf]], 2: [[3, 3, 2, 2, 2, 3, 3, 3, 3, 3, 4, 5, 6, 7, 7, 7, 8, 8, 8, 8, 9, 9],
+  [3, 4, 4, 5, 6, 6, 7, 8, 7, 6, 6, 6, 6, 6, 5, 4, 4, 3, 2, 1, 1, 1], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, inf]],
+  3: [[8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8], [8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 5, 4, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, inf]], 4: [[9, 8, 8, 8, 8, 8, 8, 8, 7, 7],
+  [9, 9, 8, 7, 6, 5, 4, 3, 3, 3], [0, 1, 2, 3, 4, 5, 6, 7, 8, inf]]}
+
 
 
 def hard_coded_test(res, num_agents, cost_mat, ac_dict):
@@ -86,28 +119,34 @@ def run_CBSS_MCPF():
   # grids = np.loadtxt(grid_file_new)
   # print("grid size", grids.shape)
 
-  starts = [11,22,33,88,99]
-  # targets = [72,81,83,40,38,27,66,73]
-  targets = [72,96,83,40,38,27,66,70]
-  dests = [46,69,19,28,37]
+  # starts = [11,22,33,88,99]
+  # # targets = [72,81,83,40,38,27,66,73]
+  # targets = [72,96,83,40,38,27,66,70]
+  # dests = [46,69,19,28,37]
 
-  clusters = [0,1,2,3,4,5,6,1] #np.arange(len(targets))
+  starts = [11, 22, 33, 88, 99]
+  targets = [72, 83, 40, 38, 27, 66, 70]
+  dests = [46, 69, 19, 28, 37]
+  clusters = np.arange(len(targets))
+
+  # clusters = [0,1,2,3,4,5,6,1] #np.arange(len(targets))
 
   # starts = [79, 613, 372, 555, 755]
   # targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]
   # dests = [865, 654, 993, 323, 1006]
 
-  ac_dict = dict()
-  ri = 0
-  for k in targets:
-    ac_dict[k] = {ri}  # set([ri,ri+1])
-    ri += 1
-    if ri >= len(starts):#-1:
-      break
-  ri = 0
-  for k in dests:
-    ac_dict[k] = set([ri])
-    ri += 1
+  # ac_dict = dict()
+  # ri = 0
+  # for k in targets:
+  #   ac_dict[k] = {ri}  # set([ri,ri+1])
+  #   ri += 1
+  #   if ri >= len(starts):#-1:
+  #     break
+  # ri = 0
+  # for k in dests:
+  #   ac_dict[k] = set([ri])
+  #   ri += 1
+  ac_dict = {72: {0}, 83: {2}, 40: {3}, 38: {4}, 46: {0}, 69: {1}, 19: {2}, 28: {3}, 37: {4}}
   print("Assignment constraints : ", ac_dict)
 
   configs = dict()
@@ -122,6 +161,7 @@ def run_CBSS_MCPF():
   print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
 
   path = res_dict["path_set"]
+  print("path is", path)
 
   print(res_dict["target_assignment"])
   print(res_dict["cluster_target_selection"])
@@ -135,6 +175,8 @@ def run_CBSS_MCPF():
 if __name__ == '__main__':
   print("begin of main")
 
-  run_CBSS_MCPF()
+  hard_coded_degenerate_cluster_test()
+
+  # run_CBSS_MCPF()
 
   print("end of main")
