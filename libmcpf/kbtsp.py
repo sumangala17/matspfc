@@ -27,6 +27,7 @@ class RestrictedTSP:
     self.sol = list() # solution, a dict that encodes a joint sequence
     self.cost = np.inf # tour cost.
     self.cost_dict = dict() # cost of each individual sequence
+    self.info = None
     return
   def __str__(self):
     return "<id:"+str(self.node_id)+",I:"+str(self.setI)+",O:"+str(self.setO)+\
@@ -67,7 +68,7 @@ class KBestMTSP:
     ### generate initial restricted TSP problem instance.
     self.tsp.InitMat()
     tnow = time.perf_counter()
-    flag, lb, seqs_dict, cost_dict = self.tsp.Solve()
+    flag, lb, seqs_dict, cost_dict, info = self.tsp.Solve()
     if flag == False:
       print("[ERROR] infeasible case? KBestTSP._Init fails to get a feasible joint sequence!")
     dt = time.perf_counter() - tnow
@@ -76,12 +77,13 @@ class KBestMTSP:
 
     ### generate a restricted TSP instance
     cval = np.sum(list(cost_dict.values()))
-    print("this was the init cval.. the rtsp game begins now...", cval)
+    # print("this was the init cval.. the rtsp game begins now...", cval)
     rtsp = RestrictedTSP(set(), set())
     rtsp.sol = seqs_dict
     rtsp.cost_dict = cost_dict
     rtsp.cost = cval
     rtsp.node_id = self.node_id_gen
+    rtsp.info = info
     self.node_id_gen = self.node_id_gen + 1
     
     ### insert into OPEN.
@@ -108,11 +110,11 @@ class KBestMTSP:
     ## solve the RTSP instance
     # print("We SOLVE RTSP!!!!!!!!!!!")
     tnow = time.perf_counter()
-    success, cost_lb, seqs_dict, cost_dict = temp_tsp.Solve()
+    success, cost_lb, seqs_dict, cost_dict, info = temp_tsp.Solve()
     # print("cost dict", cost_dict, cost_lb)
     if not success:
       # print(" temp_tsp solve success = ", success)
-      return success, [], [], []
+      return success, [], [], [], None
 
     dt = time.perf_counter() - tnow
     self.n_tsp_call = self.n_tsp_call + 1
@@ -125,7 +127,7 @@ class KBestMTSP:
     if DEBUG_KBESTTSP:
       print("[INFO] kbtsp._SolveRTSP seqs_dict = ", seqs_dict, " cost_dict = ", cost_dict)
       print("[INFO] kbtsp._VerifySol returns = ", flag)
-    return flag, cval, seqs_dict, cost_dict
+    return flag, cval, seqs_dict, cost_dict, info
 
   def _VerifySol(self, temp_tsp, setI, setO, seqs_dict):
     """
@@ -183,13 +185,14 @@ class KBestMTSP:
         if not self._FeasibilityCheck1(rtsp):
           continue # the generated rtsp is obviously infeasible
         # Note: if reach here, the rtsp is not guaranteed to be feasible.
-        flag, cval, seqs_dict, cost_dict = self._SolveRTSP(rtsp)
+        flag, cval, seqs_dict, cost_dict, info = self._SolveRTSP(rtsp)
         if DEBUG_KBESTTSP:
           print("[INFO] kbtsp._Expand, RTSP get lag = ", flag, ", cost = ", cval, ", Ie = ", setI, ", Oe = ", setO)
         if flag == True: # there is such a solution.
           rtsp.sol = seqs_dict
           rtsp.cost = cval
           rtsp.cost_dict = cost_dict
+          rtsp.info = info
           ### insert into OPEN
           self.all_nodes[rtsp.node_id] = rtsp
           self.open_list.add(cval, rtsp.node_id)

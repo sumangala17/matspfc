@@ -12,21 +12,21 @@ import seq_mcpf
 class CbssMCPF(cbss.CbssFramework) :
   """
   """
-  def __init__(self, grids, starts, goals, dests, clusters, ac_dict, configs):
+  def __init__(self, grids, starts, goals, dests, clusters, ac_dict, configs, spMat):
     """
     """
     # mtsp_solver = msmp_seq.BridgeLKH_MSMP(grids, starts, goals, dests)
     # mtsp_solver = mcpf_seq.BridgeLKH_MCPF(grids, starts, goals, dests, ac_dict) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
-    self.mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
+    self.mtsp_solver = seq_mcpf.SeqMCPF(grids, starts, goals, dests, clusters, ac_dict, configs, spMat) # NOTE that ac_dict is only used in mtsp_solver, not in CBSS itself.
     super(CbssMCPF, self).__init__(self.mtsp_solver, grids, starts, goals, dests, dict(), configs)
     return
 
-def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs):
+def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat):
   """
   starts, targets and dests are all node ID.
   heu_weight and prune_delta are not in use. @2021-05-26
   """
-  ccbs_planner = CbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+  ccbs_planner = CbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
   path_set, search_res = ccbs_planner.Search()
   # print(path_set)
   # print(res_dict)
@@ -42,10 +42,15 @@ def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs):
   res_dict["n_tsp_time"] = search_res[8]
   res_dict["n_roots"] = search_res[9]
 
+  # [res_dict["target_assignment"], res_dict["cluster_target_selection"]] =
+
+  res_dict["num_conflicts"] = search_res[10]
+  if search_res[11] is not None and hasattr(search_res[11], '__len__'):
+    [res_dict["target_assignment"], res_dict["cluster_target_selection"]] = search_res[11]
+
   res_dict["num_nodes_transformed_graph"] = len(ccbs_planner.mtsp.index2agent)
   res_dict["cost_mat"] = ccbs_planner.mtsp_solver.cost_mat
-  res_dict["target_assignment"] = ccbs_planner.mtsp_solver.target_assignment
-  res_dict["cluster_target_selection"] = ccbs_planner.mtsp_solver.cluster_target_selection
+
 
   # np.save("hard_coded_cost_mat1.npy", res_dict["cost_mat"])
 

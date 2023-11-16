@@ -4,6 +4,7 @@ All Rights Reserved.
 ABOUT: Entrypoint to the code.
 Oeffentlich fuer: RSS22
 """
+import copy
 from math import inf
 
 import context
@@ -13,6 +14,9 @@ import random
 import libmcpf.cbss_mcpf as cbss_mcpf
 
 import common as cm
+
+import libmcpf.heuristics as heuristics
+from util_data_structs import Results
 
 
 def get_paths(res_path):
@@ -28,6 +32,7 @@ def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
   # num_clusters = len(np.unique(clusters))
   # visited = [False for _ in range(num_clusters)]
   visited = [False for _ in range(len(targets))]
+  visited_clusters = [False for _ in range(max(clusters) + 1)]
   agent_path = get_paths(path)
   t = 0
   for i in range(len(targets)):
@@ -36,12 +41,13 @@ def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
     allowed_ag = ac_dict[target] if target in ac_dict else np.arange(num_agents)
     for ag in allowed_ag:
       if txy in agent_path[ag]:
-        # visited[clusters[i]] = True
+        visited_clusters[clusters[i]] = True
         visited[i] = True
-        print(f"Agent {ag} visited target {target} at timestep {agent_path[ag].index(txy)}")
+        # print(f"Agent {ag} visited target {target} at timestep {agent_path[ag].index(txy)}")
         break
     t += 1
-  assert sum(visited) == len(targets)
+
+  assert sum(visited_clusters) == max(clusters) + 1, f"{sum(visited)} and {max(clusters)}"
 
 
 def hard_coded_degenerate_cluster_test():
@@ -180,28 +186,72 @@ def run_CBSS_MCPF():
   configs["time_limit"] = 60
   configs["eps"] = 0.0
 
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs)
+  spMat = cm.getTargetGraph(grids, starts, targets, dests)
+
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, copy.deepcopy(spMat))
 
   print('n_tsp_time \t best_g_value\t num_nodes_transformed_graph')
   print(res_dict['n_tsp_time'], '\t', res_dict['best_g_value'], '\t', res_dict['num_nodes_transformed_graph'])
 
   path = res_dict["path_set"]
-  print("path is", path)
+  test_targets_visited(path, ac_dict, targets, clusters, len(starts), nx)
 
-  print(res_dict["target_assignment"])
-  print(res_dict["cluster_target_selection"])
-  test_targets_visited(path, ac_dict, targets, [], len(starts), nx)
-  
-  hard_coded_test(res_dict, len(starts), res_dict["cost_mat"], ac_dict)
-
-  return 
 
 
 if __name__ == '__main__':
   print("begin of main")
 
-  hard_coded_degenerate_cluster_test()
+  # hard_coded_degenerate_cluster_test()
 
-  # run_CBSS_MCPF()
+  run_CBSS_MCPF()
 
   print("end of main")
+
+
+def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
+  configs = dict()
+  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
+  configs["time_limit"] = 60 * 10
+  configs["eps"] = 0.0
+
+  Astar_time = time.time()
+  spMat = cm.getTargetGraph(grids, starts, targets, dests)
+  Astar_time = time.time() - Astar_time
+  spMat_copy = copy.deepcopy(spMat)
+
+  # CBSS-c
+  total_time = time.time()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  total_time = time.time() - total_time
+  path = res_dict['path_set']
+  max_step = 0
+  for agent in path:
+    max_step = max(max_step, path[agent][2][-2])
+  agent_paths = get_paths(path)
+  test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
+
+  cbss_c_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=False)
+  cbss_c_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
+                       res_dict["target_assignment"], res_dict["cluster_target_selection"],
+                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
+  del res_dict
+
+  # Heuristic
+
+  total_time = time.time()
+  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat_copy, 0).get_updated_ac_dict()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  total_time = time.time() - total_time
+  path = res_dict['path_set']
+  max_step = 0
+  for agent in path:
+    max_step = max(max_step, path[agent][2][-2])
+  agent_paths = get_paths(path)
+  test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
+
+  heuristic_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=True)
+  heuristic_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
+                       res_dict["target_assignment"], res_dict["cluster_target_selection"],
+                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
+
+  return cbss_c_res, heuristic_res

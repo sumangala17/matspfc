@@ -284,10 +284,12 @@ class CbssFramework:
           print("[ERROR] CBSS: No feasible joint sequence or time out at init!")
           sys.exit("[ERROR]")
         self.root_seq_dict[nid] = self.kbtsp.GetKthBestSol() # assign seq data to root node.
+        self.nodes[nid].info = self.root_seq_dict[nid].info
       else:
         return False # no new root to be generated.
     else: # during search
       self.root_seq_dict[nid] = self.next_seq
+      self.nodes[nid].info = self.next_seq.info
       self.next_seq = None # next_seq has been used, make it empty.
 
     ### plan path based on goal sequence for all agents ###
@@ -437,7 +439,7 @@ class CbssFramework:
     if not good:
       output_res = [ int(0), float(-1), int(0), int(0), \
         int(self.num_closed_low_level_states), 0, float(time.perf_counter()-self.tstart), \
-        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), None ]
       return dict(), output_res
     
     tnow = time.perf_counter()
@@ -447,12 +449,14 @@ class CbssFramework:
       search_success = False
       output_res = [ int(0), float(-1), int(0), int(0), \
         int(self.num_closed_low_level_states), 0, float(time.perf_counter()-self.tstart), \
-        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+        int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), None ]
       return dict(), output_res
 
     search_success = False
     best_g_value = -1
     reached_goal_id = -1
+
+    num_conflicts = 0
 
     while True:
       tnow = time.perf_counter()
@@ -495,6 +499,8 @@ class CbssFramework:
         reached_goal_id = curr_node.id
         break
 
+      num_conflicts += 1
+
       max_child_cost = 0
       for cstr in cstrs:
         if DEBUG_CBSS:
@@ -529,7 +535,8 @@ class CbssFramework:
 
     output_res = [ int(len(self.closed_set)), float(best_g_value), int(0), int(self.open_list.size()), \
       int(self.num_closed_low_level_states), int(search_success), float(time.perf_counter()-self.tstart),\
-      int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)) ]
+      int(self.kbtsp.GetTotalCalls()), float(self.kbtsp.GetTotalTime()), int(len(self.root_set)), num_conflicts,
+                   curr_node.info]
 
     if search_success:
       return self.ReconstructPath(reached_goal_id), output_res

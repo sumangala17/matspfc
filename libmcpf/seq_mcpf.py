@@ -26,7 +26,7 @@ class SeqMCPF():
     are disjoint sets to each other.
   """
 
-  def __init__(self, grid, starts, goals, dests, clusters, ac_dict, configs):
+  def __init__(self, grid, starts, goals, dests, clusters, ac_dict, configs, spMat):
     """
     """
     ### make a copy
@@ -54,13 +54,16 @@ class SeqMCPF():
     self.goal2cluster = dict()
     self.cluster2goal = self.init_cluster()
 
+    self.spMat = spMat
+
     self.endingIdxGoal = -1 # after InitNodes, index [self.endingIdxGoal-1] in self.index2* is the last goal.
     self.cost_mat = [] # size is known after invoking InitNodes
     self.setIe = set()
     self.setOe = set()
 
   def InitTargetGraph(self):
-    self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
+    if self.spMat is None:
+      self.spMat = cm.getTargetGraph(self.grid,self.starts,self.goals,self.dests) # target graph, fully connected.
     self.V = self.starts + self.goals + self.dests
     self.n2i = dict() # node ID to node index in spMat.
     for i in range(len(self.V)):
@@ -391,10 +394,10 @@ class SeqMCPF():
     res = tsp_wrapper.invoke_lkh(self.tsp_exe, problem_str)
     # print("LKH res:", res)
     # print("make sure we see destination below this, else we are in trouble!")
-    flag, seqs_dict, cost_dict = self.SeqsFromTour(res[0])
+    flag, seqs_dict, cost_dict, info = self.SeqsFromTour(res[0])
     if DEBUG_SEQ_MCPF > 3:
       print("[INFO] mtsp SeqsFromTour is ", flag)
-    return flag, res[2], seqs_dict, cost_dict
+    return flag, res[2], seqs_dict, cost_dict, info
 
   def SeqsFromTour(self, tour):
     """
@@ -406,8 +409,8 @@ class SeqMCPF():
 
     num_clusters = len(np.unique(self.clusters))
     visited = np.zeros(num_clusters)
-    self.target_assignment = {}
-    self.cluster_target_selection = {}
+    target_assignment = {}
+    cluster_target_selection = {}
 
     this_agent = -1
     curr_cost = 0
@@ -433,24 +436,24 @@ class SeqMCPF():
         if curr_agent == this_agent: # skip other agents' goals 
           last_nid = seq[-1]
 
-          if curr_nid in self.goal2cluster:
+          if curr_nid in self.goal2cluster.keys():
             curr_cluster = self.goal2cluster[curr_nid]
             # print("agent {} encountered target {} in cluster {}".format(curr_agent, curr_nid, curr_cluster))
             if not visited[curr_cluster]:
               # print("visited [curr]", visited, curr_cluster, visited[curr_cluster])
               seq.append(curr_nid)
               curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
+              assert visited[curr_cluster] == 0
               visited[curr_cluster] = 1
               # print("visited", visited)
-              assert curr_nid not in self.target_assignment, self.target_assignment
-              self.target_assignment[curr_nid] = {curr_agent}
+              assert curr_nid not in target_assignment.keys(), target_assignment
+              target_assignment[curr_nid] = curr_agent
               # print("Node {} ({},{}) assigned to agent {}".format(curr_nid, curr_nid, curr_nid, curr_agent))
-              assert curr_cluster not in self.cluster_target_selection, self.cluster_target_selection
-              self.cluster_target_selection[curr_cluster] = curr_nid
+              assert curr_cluster not in cluster_target_selection.keys(), cluster_target_selection
+              cluster_target_selection[curr_cluster] = curr_nid
               # print("{} from cluster {}\n".format(curr_nid, curr_cluster), end='\t')
           else:
             seq.append(curr_nid)
-            self.target_assignment[curr_nid] = {curr_agent}
             # print("Node {} assigned to agent {}".format(curr_nid, curr_agent))
             curr_cost = curr_cost + self.GetDist(last_nid, curr_nid)
 
@@ -465,10 +468,12 @@ class SeqMCPF():
       # tour can not be splitted.
       # E.g. the Ie and Oe do not respect the one-in-a-set rules.
       # print("case was infeasible.. so it is okay to not see destination / cost dict")
-      return 0, dict(), dict()
+      return 0, dict(), dict(), None
     # print("COST DICT in SeqTour", cost_dict, sum(list(cost_dict.values())))
 
-    return 1, seqs_dict, cost_dict
+    info = [target_assignment, cluster_target_selection]
+
+    return 1, seqs_dict, cost_dict, info
 
   def ChangeCost(self, v1, v2, d, ri):
     """
