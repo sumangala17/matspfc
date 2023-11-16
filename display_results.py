@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+from pretty_html_table import build_table
 
 from util_data_structs import Unit
 
@@ -60,15 +61,23 @@ def read_from_np(dname):
     # print(df["room-32-32-4"].columns)
     return df#[df['M']>10]
 
+
 if __name__ == '__main__':
 
-    for dname in dataset_names:
-        print('_'*190)
-        print(' '*95, dname.upper(), ' '*95)
-        print('_'*190)
-        df = read_from_np(dname)
-        print(df)
-        # with pd.ExcelWriter("/home/biorobotics/matspfc/results_mini2/res123.xlsx", mode='a', if_sheet_exists='replace') as writer:
-        #     df.to_excel(writer, sheet_name=f"Sheet_{dname}")
+    with open('styled_table.html', 'w') as f:
+        for dname in dataset_names:
+            print('_'*190)
+            print(' '*95, dname.upper(), ' '*95)
+            print('_'*190)
+            df = read_from_np(dname)
+            print(df)
+            img_path = f'/home/biorobotics/matspfc/{dname}.png'
+            html_table_blue_light = build_table(df, 'blue_dark')
+            # f.write(f"<html><font color = #00b300><h2>MAP: {dname}</h2></font></html>")
+            f.write(f"<html><h2 style='color:DodgerBlue; text-align: center;'>MAP: {dname}</h2></html>")
+            f.write('<center><img src="' + img_path + '" height="70" alt="Italian Trulli"></center>')
+            f.write(html_table_blue_light)
+            # with pd.ExcelWriter("/home/biorobotics/matspfc/results_mini2/res123.xlsx", mode='a', if_sheet_exists='replace') as writer:
+            #     df.to_excel(writer, sheet_name=f"Sheet_{dname}")
 
 

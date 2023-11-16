@@ -13,7 +13,8 @@ map_size_y = [32, 32, 16]  # 162, 65
 
 N = [5, 15, 25]                 # num_agents
 M = [10, 45, 70]        # num_targets
-K = [2, 5, 10]                  # num_clusters
+# K = [2, 5, 10]                  # num_clusters
+K = [5, 10]                  # num_clusters
 
 #results mini
 # N = [3, 6, 12]                 # num_agents
@@ -57,7 +58,7 @@ def create_problem_instances(dataset_name, num_instances=1):
 
         max_rows = df.shape[0]
 
-        for (num_agents, num_targets) in [(5,10), (10,15), (20,40), (40,70)]:
+        for (num_agents, num_targets) in [(20,35), (40,70)]:  #(5,10), (10,15),
             for num_clusters in K:
 
                 print(f"N, M, K = {num_agents}, {num_targets, num_clusters}")
