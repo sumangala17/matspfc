@@ -5,6 +5,7 @@ ABOUT: Entrypoint to the code.
 Oeffentlich fuer: RSS22
 """
 import copy
+import pickle
 from math import inf
 
 import context
@@ -16,7 +17,7 @@ import libmcpf.cbss_mcpf as cbss_mcpf
 import common as cm
 
 import libmcpf.heuristics as heuristics
-from util_data_structs import Results
+from util_data_structs import Results, Unit
 
 
 def get_paths(res_path):
@@ -197,31 +198,25 @@ def run_CBSS_MCPF():
   test_targets_visited(path, ac_dict, targets, clusters, len(starts), nx)
 
 
-
-if __name__ == '__main__':
-  print("begin of main")
-
-  # hard_coded_degenerate_cluster_test()
-
-  run_CBSS_MCPF()
-
-  print("end of main")
-
-
-def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
+def call_CBSS_c(starts, dests, targets, tgid, acd, grids, clusters, sz):
   configs = dict()
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
   configs["time_limit"] = 60 * 10
   configs["eps"] = 0.0
+
+  ac_dict = copy.deepcopy(acd)
 
   Astar_time = time.time()
   spMat = cm.getTargetGraph(grids, starts, targets, dests)
   Astar_time = time.time() - Astar_time
   spMat_copy = copy.deepcopy(spMat)
 
+  unit = Unit(starts, targets, tgid, dests, clusters, grids, Astar_time)
+
   # CBSS-c
   total_time = time.time()
   res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  print("TRUE CBSS-c", res_dict['best_g_value'])
   total_time = time.time() - total_time
   path = res_dict['path_set']
   max_step = 0
@@ -230,28 +225,70 @@ def call_CBSS_c(starts, dests, targets, ac_dict, grids, clusters, sz):
   agent_paths = get_paths(path)
   test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
 
-  cbss_c_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=False)
-  cbss_c_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
+  unit.res_cbss_c = Results(ac_dict, configs["eps"], spMat, is_heuristic=False)
+  unit.res_cbss_c.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
                        res_dict["target_assignment"], res_dict["cluster_target_selection"],
-                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
-  del res_dict
+                       res_dict["num_nodes_transformed_graph"], max_step, res_dict["num_conflicts"])
+  print("CBSS-c", unit.res_cbss_c.cost)
 
   # Heuristic
 
   total_time = time.time()
   ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat_copy, 0).get_updated_ac_dict()
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  res_dict_hr = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  print("TRUE Heuristic", res_dict_hr['best_g_value'])
   total_time = time.time() - total_time
-  path = res_dict['path_set']
+  path = res_dict_hr['path_set']
   max_step = 0
   for agent in path:
     max_step = max(max_step, path[agent][2][-2])
   agent_paths = get_paths(path)
   test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
 
-  heuristic_res = Results(starts, targets, dests, clusters, grids, ac_dict, configs["eps"], spMat, is_heuristic=True)
-  heuristic_res.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
-                       res_dict["target_assignment"], res_dict["cluster_target_selection"],
-                       res_dict["num_nodes_transformed_graph"], max_step, Astar_time, res_dict["num_conflicts"])
+  unit.res_hr = Results(ac_dict_new, configs["eps"], spMat, is_heuristic=True)
+  unit.res_hr.set_stats(total_time, res_dict_hr["n_tsp_time"], res_dict_hr["best_g_value"], agent_paths,
+                       res_dict_hr["target_assignment"], res_dict_hr["cluster_target_selection"],
+                       res_dict_hr["num_nodes_transformed_graph"], max_step, res_dict_hr["num_conflicts"])
 
-  return cbss_c_res, heuristic_res
+  print("\nHeuristic", unit.res_hr.cost)
+  return unit
+
+
+if __name__ == '__main__':
+  print("begin of main")
+
+  # targets = [141, 545, 734, 472, 1015, 1014, 962, 69, 358, 244, 645, 255, 656, 643, 334]
+  # clusters = [1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0]
+
+  starts = [84, 689, 634, 522, 358]
+  targets = [727, 86, 360, 333, 839, 1022, 150, 644, 937, 172, 570, 271, 673, 272, 313, 314, 989, 746, 667, 830, 74, 639, 996, 957, 329, 565, 545, 370, 857, 338]
+  dests =[688, 364, 125, 348, 68]
+  clusters = [0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1]
+  grids = np.loadtxt(f'/home/biorobotics/matspfc/datasets/maze-32-32-2_binary.map')
+  acd = {727: {0, 1}, 86: {1, 2}, 360: {2, 3}, 333: {3, 4}, 688: {0}, 364: {1}, 125: {2}, 348: {3}, 68: {4}} #pickle.load(open('nov16/maze-32-32-2/numpyfiles/maze-32-32-2_N5_M30_K10_h01_run1.npy', 'rb')).res_cbss_c.ac_dict
+  tgid = None #[(3, 4), (27, 20), (28, 3), (12, 28), (9, 4), (7, 23), (7, 26), (25, 26), (4, 23), (30, 25), (13, 13), (9, 10), (29, 7),
+          # (31, 30), (5, 13), (10, 31), (11, 17), (28, 14), (20, 29), (31, 6), (27, 19), (13, 24), (20, 24), (19, 25), (18, 1), (11, 18),
+          # (13, 18), (13, 14), (26, 6), (5, 31)]
+
+  print("initial acd:", acd)
+
+  for _ in range(1):
+    u = call_CBSS_c(starts, dests, targets, tgid, acd, grids, clusters, 32)
+    print(u.res_hr.cost, u.res_cbss_c.cost)
+    print(u.res_hr.ac_dict, '\n', u.res_cbss_c.ac_dict)
+    print("----the later acds----\n", acd)
+    print('__________________________________________________')
+
+
+
+  # res = call_CBSS_c()
+
+  # res = call_CBSS_c(starts=[86, 271, 180, 40, 346, 456, 815, 245, 834, 939],
+  #             targets=targets, dests=[435, 910, 355, 622, 514, 1021, 627, 921, 566, 790], ac_dict={141: {0}, 545: {1, 2},
+  # 734: {3}, 472: {4}, 1015: {5}, 1014: {5, 6}, 962: {7}, 69: {7}, 358: {8}, 435: {0}, 910: {1}, 355: {2}, 622: {3}, 514: {4},
+  # 1021: {5}, 627: {6}, 921: {7}, 566: {8}, 790: {9}, 244: {0, 1, 2, 3, 7}, 645: {0, 1, 4, 5, 7, 8}, 255: {0}, 656: {0, 4, 6, 8},
+  # 643: {0, 1, 4, 5, 7, 8}, 334: {0, 1, 2, 3, 7, 8}}, clusters=clusters,
+  #             grids=pickle.load(open('results_nov/maze-32-32-2/numpyfiles/maze-32-32-2_N10_M15_K2_h1_run1.npy', 'rb')).grids, sz=32)
+  # # run_CBSS_MCPF()
+
+  print("end of main")

@@ -8,7 +8,7 @@ from pretty_html_table import build_table
 
 from util_data_structs import Unit
 
-dataset_names = ["maze-32-32-2", "room-32-32-4", "empty-16-16"]
+dataset_names = ["maze-32-32-2", "room-32-32-4", "empty-16-16", "den312d"]
 
 res_mat = {}
 for d in dataset_names:
@@ -17,12 +17,12 @@ for d in dataset_names:
         'total_time_cbssc': [], 'total_time_hr': [], 'ntsp_cbssc': [], 'ntsp_hr': [],
         'cost_cbssc': [], 'cost_hr': [], 'last_ts_cbssc': [], 'last_ts_hr': [],
         'conflicts_cbssc': [], 'conflicts_hr': [],
-        'cost up %': [], 'ntsp time down %': []
+        'cost up %': [], 'ntsp time down %': []#, 'run': []
     }
 
 def read_from_np(dname):
 
-    file_path = "/home/biorobotics/matspfc/results_nov/" + dname + "/numpyfiles/"
+    file_path = "/home/biorobotics/matspfc/nov17/" + dname + "/numpyfiles/"
     # for file in os.walk("/home/biorobotics/matspfc/results/" + dname + "/numpyfiles/"):
     for filename in os.listdir(file_path):
         if "01" not in filename:
@@ -32,8 +32,9 @@ def read_from_np(dname):
         filename = filename.replace(dname + "_N", "")
         filename = filename.replace('M', '')
         filename = filename.replace('K', '')
-        n, m, k, h, _ = filename.split('.')[0].split('_')
+        n, m, k, h, run = filename.split('.')[0].split('_')
         h = h.replace('h', '')
+        run = run.split('.')[0]
         res_mat[dname]['N'].append(int(n))
         res_mat[dname]['M'].append(int(m))
         res_mat[dname]['K'].append(int(k))
@@ -42,7 +43,8 @@ def read_from_np(dname):
         with open(file_path + filename1, 'rb') as f:
             unit: Unit = pickle.load(f)
         # print(res.print_stats())
-        res_mat[dname]['Astar_time'].append(unit.res_hr.Astar_time)
+        # res_mat[dname]['run'].append(run)
+        res_mat[dname]['Astar_time'].append(unit.Astar_time)
         res_mat[dname]['total_time_cbssc'].append(unit.res_cbss_c.total_time)
         res_mat[dname]['total_time_hr'].append(unit.res_hr.total_time)
         res_mat[dname]['ntsp_cbssc'].append(unit.res_cbss_c.ntsp)
@@ -57,14 +59,14 @@ def read_from_np(dname):
         res_mat[dname]['cost up %'].append((unit.res_hr.cost - unit.res_cbss_c.cost) * 100 / unit.res_cbss_c.cost)
         res_mat[dname]['ntsp time down %'].append((unit.res_cbss_c.ntsp - unit.res_hr.ntsp) * 100 / unit.res_cbss_c.ntsp)
 
-    df = pd.DataFrame(res_mat[dname])#.groupby(['N','M','K','useH','total_time','ntsp','cost','last_ts'])
+    df = pd.DataFrame(res_mat[dname])#.groupby(['N','M','K','ntsp_cbssc','ntsp_hr','cost_hr', 'cost_cbssc','last_ts_cbssc', 'last_ts_hr', 'cost up %', 'ntsp time down %'])
     # print(df["room-32-32-4"].columns)
     return df#[df['M']>10]
 
 
 if __name__ == '__main__':
 
-    with open('styled_table.html', 'w') as f:
+    with open('styled_table1.html', 'w') as f:
         for dname in dataset_names:
             print('_'*190)
             print(' '*95, dname.upper(), ' '*95)

@@ -16,7 +16,7 @@ class PathHeuristic:
         self.starts = starts
         self.targets = targets
         self.dests = dests
-        self.ac_dict = ac_dict
+        self.ac_dict = copy.deepcopy(ac_dict)
         self.grids = grids
         self.clusters = clusters
         # self.spMat = cm.getTargetGraph(grids, starts, targets, dests)

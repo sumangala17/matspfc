@@ -431,7 +431,7 @@ class CbssFramework:
     """
     = high level search
     """
-    print("CBSS search begin!")
+    # print("CBSS search begin!")
     self.time_limit = self.configs["time_limit"]
     self.tstart = time.perf_counter()
 
