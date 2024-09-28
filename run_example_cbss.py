@@ -5,6 +5,7 @@ ABOUT: Entrypoint to the code.
 Oeffentlich fuer: RSS22
 """
 import copy
+import math
 import pickle
 from math import inf
 
@@ -22,11 +23,13 @@ from util_data_structs import Results, Unit
 
 def get_paths(res_path):
   agent_paths = {}
+  max_step = 0
   for agent in res_path:
     agent_paths[agent] = [p for p in list(zip(res_path[agent][0], res_path[agent][1]))]
+    max_step = max(max_step, res_path[agent][2][-2])
     # print("Agent {}'s path is ".format(agent), [p for p in list(zip(res_path[agent][0], res_path[agent][1]))], "at times",
     #       res_path[agent][2])
-  return agent_paths
+  return agent_paths, max_step
 
 
 def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
@@ -34,7 +37,8 @@ def test_targets_visited(path, ac_dict, targets, clusters, num_agents, sz):
   # visited = [False for _ in range(num_clusters)]
   visited = [False for _ in range(len(targets))]
   visited_clusters = [False for _ in range(max(clusters) + 1)]
-  agent_path = get_paths(path)
+  agent_path, m = get_paths(path)
+  # print(agent_path)
   t = 0
   for i in range(len(targets)):
     target = targets[i]
@@ -60,7 +64,7 @@ def hard_coded_degenerate_cluster_test():
   configs = dict()
   configs["problem_str"] = "msmp"
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60
+  configs["time_limit"] = 60 * 30
   configs["eps"] = 0.0
   ny = 10
   nx = 10
@@ -134,57 +138,20 @@ def run_CBSS_MCPF():
   grids = np.zeros((ny,nx))
   grids[5,3:7] = 1 # obstacles
 
-  # grid_file = '/home/biorobotics/matspfc/datasets/maze-32-32-2.map'
-  # grid_file_new = '/home/biorobotics/matspfc/datasets/maze-32-32-2_binary.map'
-  #
-  # with open(grid_file) as file:
-  #   for i in range(4):
-  #     next(file)
-  #   newText = file.read().replace('@', '1 ')
-  #   newText = newText.replace('.', '0 ')
-  #   newText = newText
-  #
-  # with open(grid_file_new, 'w') as file:
-  #   file.write(newText)
-  #
-  # grids = np.loadtxt(grid_file_new)
-  # print("grid size", grids.shape)
-
-  # starts = [11,22,33,88,99]
-  # # targets = [72,81,83,40,38,27,66,73]
-  # targets = [72,96,83,40,38,27,66,70]
-  # dests = [46,69,19,28,37]
-
   starts = [11, 22, 33, 88, 99]
   targets = [72, 96, 83, 40, 38, 27, 66, 70]
   dests = [46, 69, 19, 28, 37]
   clusters = np.arange(len(targets))
   clusters = [0,1,2,3,4,5,6,1]
 
-  # clusters = [0,1,2,3,4,5,6,1] #np.arange(len(targets))
 
-  # starts = [79, 613, 372, 555, 755]
-  # targets = [854, 191, 417, 810, 528, 141, 95, 50, 607, 377, 74, 653, 741, 843, 650]
-  # dests = [865, 654, 993, 323, 1006]
-
-  # ac_dict = dict()
-  # ri = 0
-  # for k in targets:
-  #   ac_dict[k] = {ri}  # set([ri,ri+1])
-  #   ri += 1
-  #   if ri >= len(starts):#-1:
-  #     break
-  # ri = 0
-  # for k in dests:
-  #   ac_dict[k] = set([ri])
-  #   ri += 1
   ac_dict = {72: {0}, 83: {2}, 40: {3}, 38: {4}, 46: {0}, 69: {1}, 19: {2}, 28: {3}, 37: {4}}
   print("Assignment constraints : ", ac_dict)
 
   configs = dict()
   configs["problem_str"] = "msmp"
   configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60
+  configs["time_limit"] = 60 / 2
   configs["eps"] = 0.0
 
   spMat = cm.getTargetGraph(grids, starts, targets, dests)
@@ -198,46 +165,12 @@ def run_CBSS_MCPF():
   test_targets_visited(path, ac_dict, targets, clusters, len(starts), nx)
 
 
-def call_CBSS_c(starts, dests, targets, tgid, acd, grids, clusters, sz):
-  configs = dict()
-  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
-  configs["time_limit"] = 60 * 10
-  configs["eps"] = 0.0
-
-  ac_dict = copy.deepcopy(acd)
-
-  Astar_time = time.time()
-  spMat = cm.getTargetGraph(grids, starts, targets, dests)
-  Astar_time = time.time() - Astar_time
-  spMat_copy = copy.deepcopy(spMat)
-
-  unit = Unit(starts, targets, tgid, dests, clusters, grids, Astar_time)
-
-  # CBSS-c
-  total_time = time.time()
-  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
-  print("TRUE CBSS-c", res_dict['best_g_value'])
-  total_time = time.time() - total_time
-  path = res_dict['path_set']
-  max_step = 0
-  for agent in path:
-    max_step = max(max_step, path[agent][2][-2])
-  agent_paths = get_paths(path)
-  test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
-
-  unit.res_cbss_c = Results(ac_dict, configs["eps"], spMat, is_heuristic=False)
-  unit.res_cbss_c.set_stats(total_time, res_dict["n_tsp_time"], res_dict["best_g_value"], agent_paths,
-                       res_dict["target_assignment"], res_dict["cluster_target_selection"],
-                       res_dict["num_nodes_transformed_graph"], max_step, res_dict["num_conflicts"])
-  print("CBSS-c", unit.res_cbss_c.cost)
-
-  # Heuristic
-
-  total_time = time.time()
-  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat_copy, 0).get_updated_ac_dict()
-  res_dict_hr = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+def save_hr_result(starts, dests, targets, ac_dict, grids, clusters, sz, configs, spMat, results_path, dname):
+  print("Welcome to Heuristic!")
+  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat,
+                                         0).get_updated_ac_dict()
+  res_dict_hr = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat)
   print("TRUE Heuristic", res_dict_hr['best_g_value'])
-  total_time = time.time() - total_time
   path = res_dict_hr['path_set']
   max_step = 0
   for agent in path:
@@ -245,13 +178,138 @@ def call_CBSS_c(starts, dests, targets, tgid, acd, grids, clusters, sz):
   agent_paths = get_paths(path)
   test_targets_visited(path, ac_dict, targets, clusters, len(starts), sz)
 
-  unit.res_hr = Results(ac_dict_new, configs["eps"], spMat, is_heuristic=True)
-  unit.res_hr.set_stats(total_time, res_dict_hr["n_tsp_time"], res_dict_hr["best_g_value"], agent_paths,
-                       res_dict_hr["target_assignment"], res_dict_hr["cluster_target_selection"],
-                       res_dict_hr["num_nodes_transformed_graph"], max_step, res_dict_hr["num_conflicts"])
+  num_agents = len(starts)
+  num_targets = len(targets)
+  num_clusters = len(clusters)
 
-  print("\nHeuristic", unit.res_hr.cost)
-  return unit
+  # write to file
+  fpath = results_path + f"numpyfiles/{dname}_N{num_agents}_M{num_targets}_K{num_clusters}"
+  with open(fpath + f"_h1.npy", 'wb') as f:
+    pickle.dump(res_dict_hr, f, pickle.HIGHEST_PROTOCOL)
+
+  with open(results_path + f"{dname}_N{num_agents}_M{num_targets}_K{num_clusters}_h1.txt", "w") as f:
+    print(res_dict_hr, file=f)
+    print(agent_paths, file=f)
+
+
+
+
+def call_CBSS_c(starts, dests, targets, acd, grids, clusters, sz, f):
+  configs = dict()
+  configs["tsp_exe"] = "./pytspbridge/tsp_solver/LKH-2.0.10/LKH"
+  configs["time_limit"] = 60 * 3
+  configs["eps"] = 0.0
+
+  ac_dict = copy.deepcopy(acd)
+
+  # Astar_time = time.time()
+  spMat = cm.getTargetGraph(grids, starts, targets, dests)
+  # Astar_time = time.time() - Astar_time
+  spMat_copy = copy.deepcopy(spMat)
+
+  # CBSS-c
+  # configs["eps"] = 0.0
+  # success = [0,0,0,0]
+
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  # if res_dict['best_g_value'] > 0:
+  #   success[0] = 1
+  # elif res_dict['best_g_value'] == -1:
+  #   success[1] = -1
+
+    # print("CBSS-c COST, nTSP, CONFLICTS, nodes",
+  #       res_dict['best_g_value'], res_dict['n_tsp_time'], res_dict['num_conflicts'],
+  #       res_dict["num_nodes_transformed_graph"])
+  c1, t1 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  cn1, tn1 = res_dict["num_conflicts"], res_dict["num_nodes_transformed_graph"]
+
+  # cn1, n1 = res_dict['num_conflicts'], res_dict['num_nodes_transformed_graph']
+
+  # configs["eps"] = 0.01
+  # res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  # c2, t2 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  # print("EPS=0.01: CBSS-c COST, nTSP, CONFLICTS",
+  #       res_dict['best_g_value'], res_dict['n_tsp_time'], res_dict['num_conflicts'])
+  #
+  # configs["eps"] = 0.1
+  # res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  # c3, t3 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  # print("EPS=0.1: CBSS-c COST, nTSP, CONFLICTS",
+  #       res_dict['best_g_value'], res_dict['n_tsp_time'], res_dict['num_conflicts'])
+  #
+  # configs["eps"] = math.inf
+  # res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat)
+  # c4, t4 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  # print("EPS=inf: CBSS-c COST, nTSP, CONFLICTS",
+  #       res_dict['best_g_value'], res_dict['n_tsp_time'], res_dict['num_conflicts'])
+
+  # return t1, t2, t3, t4, c1, c2, c3, c4
+
+  test_targets_visited(res_dict['path_set'], ac_dict, targets, clusters, len(starts), sz)
+
+  # with open(f + '_h0.txt', "w") as file:
+  #   file.write("\n\nCBSS-C STATS")
+  #   file.write('\nstarts:'+str(starts) + '\ntargets:' + str(targets) + '\ndests:'+str(dests))
+  #   file.write('\nac_dict:' + str(ac_dict) + '\nclusters:' + str(clusters) + '\n\n')
+  #   for k in res_dict:
+  #     if 'mat' not in k.lower() and 'path' not in k:
+  #       file.write(k + ': ' + str(res_dict[k]) + '\n')
+  #   file.write('agent_paths:' + str(agent_paths))
+
+  # print("CBSS-c", unit.res_cbss_c.cost, unit.res_cbss_c.ntsp)
+
+  # Heuristic
+
+  ac_dict_new = heuristics.PathHeuristic(starts,targets,dests,acd,grids,clusters,spMat_copy,
+                                         0).get_updated_ac_dict()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  # print("a=0 | CBSS-ch COST, nTSP, conflicts, nodes:", res_dict['best_g_value'], res_dict['n_tsp_time'], res_dict["num_conflicts"],
+  #       res_dict["num_nodes_transformed_graph"])
+  test_targets_visited(res_dict['path_set'], ac_dict, targets, clusters, len(starts), sz)
+  ch0, th0 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  chn0, thn0 = res_dict["num_conflicts"], res_dict["num_nodes_transformed_graph"]
+
+  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat,
+                                         3).get_updated_ac_dict()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  test_targets_visited(res_dict['path_set'], ac_dict, targets, clusters, len(starts), sz)
+  ch3, th3 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  chn3, thn3 = res_dict["num_conflicts"], res_dict["num_nodes_transformed_graph"]
+
+
+  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat,
+                                         4).get_updated_ac_dict()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  test_targets_visited(res_dict['path_set'], ac_dict, targets, clusters, len(starts), sz)
+  ch4, th4 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  chn4, thn4 = res_dict["num_conflicts"], res_dict["num_nodes_transformed_graph"]
+
+
+  ac_dict_new = heuristics.PathHeuristic(starts, targets, dests, ac_dict, grids, clusters, spMat,
+                                         5).get_updated_ac_dict()
+  res_dict = cbss_mcpf.RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict_new, configs, spMat_copy)
+  ch5, th5 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  chn5, thn5 = res_dict["num_conflicts"], res_dict["num_nodes_transformed_graph"]
+  test_targets_visited(res_dict['path_set'], ac_dict, targets, clusters, len(starts), sz)
+
+  # print("a=5 | CBSS-ch COST, nTSP, conflicts, nodes:", res_dict['best_g_value'], res_dict['n_tsp_time'],
+  #       res_dict["num_conflicts"],
+  #       res_dict["num_nodes_transformed_graph"])
+  # c2, t2 = res_dict['best_g_value'], res_dict['n_tsp_time']
+  # cn2, n2 = res_dict['num_conflicts'], res_dict['num_nodes_transformed_graph']
+  # max_step = 0
+  # for agent in path:
+  #   max_step = max(max_step, path[agent][2][-2])
+
+
+  arr = np.array([c1, t1, cn1, tn1, ch3, th3, chn3, thn3,ch0, th0, chn0, thn0,
+                  ch4, th4, chn4, thn4, ch5, th5, chn5, thn5])
+  return arr
+
+  # print(c1,c2,'\t\t',t1,t2)
+  return (c1, t1, cn1, tn1, ch3, th3, chn3, thn3,ch0, th0, chn0, thn0,
+          ch4, th4, chn4, thn4, ch5, th5, chn5, thn5)
+  # return c1,c2, t1,t2, cn1,cn2,n1,n2
 
 
 if __name__ == '__main__':

@@ -1,0 +1,9 @@
+0000000000000000000000000000000000000000 2c16567c5bf4f94a207f1b0a2b192007dbaf9d52 Sumangala <sumangala.patki@gmail.com> 1691780656 -0400	branch: Created from HEAD
+2c16567c5bf4f94a207f1b0a2b192007dbaf9d52 d5fcaa47f83082f81eea9ff3aa9fc0cdb76a994a Sumangala <sumangala.patki@gmail.com> 1691808745 -0400	commit: with newly defined Prev(vi), Next(vi)
+d5fcaa47f83082f81eea9ff3aa9fc0cdb76a994a 0f8a464768797530e63293591371b3cd50b5e3d7 Sumangala <sumangala.patki@gmail.com> 1691871075 -0400	commit: add condition for next&prev for nid not in acdict
+0f8a464768797530e63293591371b3cd50b5e3d7 5114bb54b20dde3d6d9284a7e4cb7757e026370d Sumangala <sumangala.patki@gmail.com> 1691893628 -0400	commit: fix initial static viz
+5114bb54b20dde3d6d9284a7e4cb7757e026370d b902194009df97bfa5a186d491c312bef6d20046 Sumangala <sumangala.patki@gmail.com> 1691893692 -0400	commit: all conditions for next, prev; separate next, prev for dests
+b902194009df97bfa5a186d491c312bef6d20046 f55dbdb720e221be2e6a8fe78c118fcb8d054f22 Sumangala <sumangala.patki@gmail.com> 1691961577 -0400	commit: reformat tabs
+f55dbdb720e221be2e6a8fe78c118fcb8d054f22 1b9f9841143899393a3707a3e364f07e46568c58 Sumangala <sumangala.patki@gmail.com> 1691965888 -0400	commit: make gif
+1b9f9841143899393a3707a3e364f07e46568c58 96cf00bac07cd1ca7eb6631a475a7222ee8cd08c Sumangala <sumangala.patki@gmail.com> 1691968579 -0400	commit: color targets by cluster, rm fill color once visited
+96cf00bac07cd1ca7eb6631a475a7222ee8cd08c 9a53c9c222fce1acbb2364404b4c60d03cd079cc Sumangala <sumangala.patki@gmail.com> 1691977238 -0400	commit: debug

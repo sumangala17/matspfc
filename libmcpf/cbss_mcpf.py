@@ -45,7 +45,7 @@ def RunCbssMCPF(grids, starts, targets, dests, clusters, ac_dict, configs, spMat
   # [res_dict["target_assignment"], res_dict["cluster_target_selection"]] =
 
   res_dict["num_conflicts"] = search_res[10]
-  if search_res[11] is not None and hasattr(search_res[11], '__len__'):
+  if len(search_res) > 11 and hasattr(search_res[11], '__len__'):
     [res_dict["target_assignment"], res_dict["cluster_target_selection"]] = search_res[11]
 
   res_dict["num_nodes_transformed_graph"] = len(ccbs_planner.mtsp.index2agent)

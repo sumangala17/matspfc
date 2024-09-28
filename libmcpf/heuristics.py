@@ -243,9 +243,9 @@ class PathHeuristic:
         if alpha < 1:
             cost_bound = alpha * tc_alpha + (1 - alpha) * med_cost
         elif alpha == 2:
-            cost_bound = avg_cost
-        elif alpha == 3:
             cost_bound = med_cost
+        elif alpha == 3:
+            cost_bound = avg_cost
         elif alpha == 4:
             cost_bound = np.clip(tc_2, a_max=med_cost, a_min=0)
         elif alpha == 5:

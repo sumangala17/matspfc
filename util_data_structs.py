@@ -5,8 +5,9 @@ class Results:
         self.spMat = spMat
         self.is_heuristic = is_heuristic
 
-    def set_stats(self, total_time, ntsp, cost, agent_paths, target_assignment, cluster_target_selection, num_nodes,
-                  max_step, num_conflicts):
+    def set_stats(self, total_time, ntsp, cost, agent_paths, num_nodes, max_step, num_conflicts,
+                  target_assignment=None, cluster_target_selection=None,
+                  ):
         self.total_time = total_time
         self.ntsp = ntsp
         self.cost = cost
@@ -16,6 +17,9 @@ class Results:
         self.num_nodes = num_nodes
         self.max_step = max_step
         self.num_conflicts = num_conflicts
+
+    def get_dict(self):
+        return {'cost': self.cost, 'ntsp': self.ntsp}#, 'ac_dict': list(self.ac_dict)}
 
 
 

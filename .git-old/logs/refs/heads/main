@@ -1,0 +1,4 @@
+0000000000000000000000000000000000000000 5c7f52120d55d62514d3fe9f84471478e7e0c547 Sumangala <sumangala.patki@gmail.com> 1691672098 -0400	clone: from https://github.com/sumcoder/matspfc.git
+5c7f52120d55d62514d3fe9f84471478e7e0c547 c92663746fecb8221092e781f5ae7371d72ffb61 Sumangala <sumangala.patki@gmail.com> 1691672568 -0400	commit: first commit syntax for LKH version
+c92663746fecb8221092e781f5ae7371d72ffb61 2c16567c5bf4f94a207f1b0a2b192007dbaf9d52 Sumangala <sumangala.patki@gmail.com> 1691678961 -0400	commit: add basic plt viz for static gridworld
+2c16567c5bf4f94a207f1b0a2b192007dbaf9d52 821ab31db4b70f21333fa3ddef6693143429d766 Sumangala <sumangala.patki@gmail.com> 1691985967 -0400	commit: copy latest viz to main branch
